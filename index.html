@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hablemos">
+<meta name="theme-color" content="#0e1418">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Hablemos</title>
+<style>
+:root{
+  --bg:#0e1418; --panel:#162027; --panel2:#1d2a33; --line:#2a3a45;
+  --text:#e8eef2; --muted:#8fa3b0; --accent:#2fd0a8; --accent2:#1a9e7f;
+  --good:#3ddc84; --ok:#f5c04a; --bad:#ff6b6b; --you:#24506a;
+  --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;width:100%}
+textarea{resize:vertical;min-height:70px}
+label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+.screen{display:none;height:100%;flex-direction:column}
+.screen.on{display:flex}
+header{padding:calc(12px + var(--safe-t)) 16px 12px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--line);background:var(--bg)}
+header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--panel);font-size:18px}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
+.btn{display:block;width:100%;padding:14px;border-radius:12px;background:var(--accent);color:#04241c;font-weight:700;text-align:center}
+.btn.ghost{background:var(--panel2);color:var(--text);font-weight:600}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:left}
+.card.sel{border-color:var(--accent);background:#173a33}
+.card .ic{font-size:24px}.card .t{font-weight:700;margin-top:4px}.card .d{font-size:12.5px;color:var(--muted)}
+.seg{display:flex;background:var(--panel2);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;padding:8px 4px;border-radius:8px;font-size:14px;color:var(--muted)}
+.seg button.sel{background:var(--accent);color:#04241c;font-weight:700}
+/* chat */
+#chat{display:flex;flex-direction:column;gap:12px;padding-bottom:24px}
+.msg{max-width:88%;padding:10px 12px;border-radius:14px;position:relative}
+.msg.tutor{background:var(--panel);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.you{background:var(--you);align-self:flex-end;border-bottom-right-radius:4px}
+.msg .es{font-size:17px}
+.msg .en{font-size:14px;color:var(--muted);margin-top:6px;display:none}
+.msg.showen .en{display:block}
+.tools{display:flex;gap:6px;margin-top:8px}
+.chip{font-size:13px;padding:5px 10px;border-radius:20px;background:var(--panel2);border:1px solid var(--line)}
+.w{padding:0 1px;border-radius:4px;border-bottom:2px solid transparent}
+.w.g{border-color:var(--good)}.w.o{border-color:var(--ok);background:rgba(245,192,74,.12)}.w.b{border-color:var(--bad);background:rgba(255,107,107,.15)}
+.fb{align-self:stretch;background:#121b21;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:14.5px}
+.fb .scores{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.pill{font-size:12.5px;padding:4px 9px;border-radius:20px;background:var(--panel2);font-weight:600}
+.pill.g{color:var(--good)}.pill.o{color:var(--ok)}.pill.b{color:var(--bad)}
+.fb .lbl{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+.fb .line{display:flex;align-items:flex-start;gap:8px;margin-top:3px}
+.fb .line .tx{flex:1;font-size:16px}
+.fb ul{margin:6px 0 0;padding-left:18px;color:#c9d6de}
+.fb .ok{color:var(--good)}
+.play{flex:none;width:32px;height:32px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-size:13px}
+.typing{align-self:flex-start;color:var(--muted);font-size:14px;padding:4px 6px}
+/* bottom bar */
+.bar{padding:10px 16px calc(12px + var(--safe-b));border-top:1px solid var(--line);background:var(--bg)}
+.live{min-height:22px;font-size:15px;color:var(--muted);text-align:center;margin-bottom:8px}
+.ctrls{display:flex;align-items:center;justify-content:space-between}
+.side{width:52px;height:52px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:20px}
+#mic{width:76px;height:76px;border-radius:50%;background:var(--accent);display:grid;place-items:center;
+  box-shadow:0 0 0 0 rgba(47,208,168,.5);transition:transform .1s}
+#mic svg{width:32px;height:32px;fill:#04241c}
+#mic.rec{background:var(--bad);animation:pulse 1.4s infinite}
+#mic.rec svg{fill:#fff}
+#mic:disabled{opacity:.45;animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,107,107,.55)}70%{box-shadow:0 0 0 18px rgba(255,107,107,0)}100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}}
+#typebox{display:none;gap:8px;margin-bottom:10px}
+#typebox.on{display:flex}
+#typebox input{flex:1}
+#typebox button{width:auto;padding:0 16px;border-radius:10px;background:var(--accent);color:#04241c;font-weight:700}
+/* sheet */
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:20}
+.sheet.on{display:flex}
+.sheet .in{background:var(--panel);width:100%;max-height:85%;overflow-y:auto;border-radius:18px 18px 0 0;
+  padding:18px 16px calc(18px + var(--safe-b))}
+.sheet h2{margin:0 0 6px;font-size:19px}
+#toast{position:fixed;left:50%;top:calc(70px + var(--safe-t));transform:translateX(-50%);background:#000c;
+  padding:9px 14px;border-radius:10px;font-size:14px;display:none;z-index:30;max-width:90%;text-align:center}
+.err{color:var(--bad)}
+</style>
+</head>
+<body>
+
+<!-- SETTINGS -->
+<section id="s-settings" class="screen">
+  <header><h1>Settings</h1><button class="iconbtn" id="setClose" aria-label="Close">✕</button></header>
+  <div class="scroll">
+    <p class="note" style="margin-top:0">Keys are stored only on this phone (in the browser), never in the app's code.</p>
+    <label>Azure Speech key</label><input id="azKey" type="password" autocomplete="off" placeholder="32-character key">
+    <label>Azure Speech region</label><input id="azRegion" placeholder="eastus" autocapitalize="off">
+    <label>Claude API key</label><input id="clKey" type="password" autocomplete="off" placeholder="sk-ant-...">
+    <label>Claude model</label>
+    <select id="model">
+      <option value="claude-sonnet-5-5">Sonnet 5.5 (best feedback)</option>
+      <option value="claude-haiku-5-5">Haiku 5.5 (faster, cheaper)</option>
+    </select>
+    <label>Auto-play tutor replies</label>
+    <div class="seg" id="autoplaySeg"><button data-v="1">On</button><button data-v="0">Off</button></div>
+    <p class="note">Pronunciation is graded against Mexican Spanish (es-MX). That is the only Latin American accent Azure's assessor supports, and it's a solid neutral reference for Colombia and Central America too.</p>
+    <div style="height:14px"></div>
+    <button class="btn" id="saveSettings">Save</button>
+    <div style="height:10px"></div>
+    <button class="btn ghost" id="testKeys">Test keys</button>
+    <p class="note" id="testOut"></p>
+  </div>
+</section>
+
+<!-- HOME -->
+<section id="s-home" class="screen">
+  <header><h1>¡Hablemos!</h1><button class="iconbtn" id="openSettings" aria-label="Settings">⚙︎</button></header>
+  <div class="scroll">
+    <label style="margin-top:0">Scenario</label>
+    <div class="grid" id="scenarios"></div>
+    <div id="customWrap" style="display:none">
+      <label>Describe the situation</label>
+      <textarea id="customText" placeholder="e.g. I'm at a car rental counter in Bogotá and my reservation is missing"></textarea>
+    </div>
+    <label>Level</label>
+    <div class="seg" id="levelSeg">
+      <button data-v="beginner">Beginner</button><button data-v="intermediate">Intermediate</button><button data-v="advanced">Advanced</button>
+    </div>
+    <label>Tutor accent</label>
+    <select id="country"></select>
+    <label>Tutor voice</label>
+    <div class="seg" id="genderSeg"><button data-v="F">Female</button><button data-v="M">Male</button></div>
+    <label>Tutor speed</label>
+    <div class="seg" id="speedSeg"><button data-v="0%">Normal</button><button data-v="-15%">Slower</button><button data-v="-30%">Slow</button></div>
+    <div style="height:20px"></div>
+    <button class="btn" id="startBtn">Start conversation</button>
+    <p class="note" style="text-align:center">Tap the mic, speak, tap again to send. Underlined words show pronunciation: green good · yellow close · red needs work. Tap any word to hear it.</p>
+  </div>
+</section>
+
+<!-- CHAT -->
+<section id="s-chat" class="screen">
+  <header>
+    <button class="iconbtn" id="backBtn" aria-label="Back">‹</button>
+    <h1 id="chatTitle">Conversation</h1>
+    <button class="iconbtn" id="endBtn" aria-label="Finish and review" style="width:auto;padding:0 12px;font-size:14px;font-weight:600">Review</button>
+  </header>
+  <div class="scroll" id="chatScroll"><div id="chat"></div></div>
+  <div class="bar">
+    <div id="typebox"><input id="typeIn" placeholder="Escribe en español…" autocapitalize="sentences"><button id="typeSend">Send</button></div>
+    <div class="live" id="live"></div>
+    <div class="ctrls">
+      <button class="side" id="kbBtn" aria-label="Type instead">⌨︎</button>
+      <button id="mic" aria-label="Speak"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg></button>
+      <button class="side" id="hintBtn" aria-label="Hint">💡</button>
+    </div>
+  </div>
+</section>
+
+<div class="sheet" id="sheet"><div class="in" id="sheetIn"></div></div>
+<div id="toast"></div>
+<audio id="player" playsinline></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const RECOG_LOCALE = "es-MX";
+
+const VOICES = {
+  MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
+  CO:{name:"Colombia",loc:"es-CO",F:"es-CO-SalomeNeural",M:"es-CO-GonzaloNeural"},
+  CR:{name:"Costa Rica",loc:"es-CR",F:"es-CR-MariaNeural",M:"es-CR-JuanNeural"},
+  GT:{name:"Guatemala",loc:"es-GT",F:"es-GT-MartaNeural",M:"es-GT-AndresNeural"},
+  SV:{name:"El Salvador",loc:"es-SV",F:"es-SV-LorenaNeural",M:"es-SV-RodrigoNeural"},
+  HN:{name:"Honduras",loc:"es-HN",F:"es-HN-KarlaNeural",M:"es-HN-CarlosNeural"},
+  NI:{name:"Nicaragua",loc:"es-NI",F:"es-NI-YolandaNeural",M:"es-NI-FedericoNeural"},
+  PA:{name:"Panama",loc:"es-PA",F:"es-PA-MargaritaNeural",M:"es-PA-RobertoNeural"}
+};
+
+const SCENARIOS = [
+  {id:"cafe",ic:"☕",t:"Café",d:"Order a drink and something to eat",
+   role:"a friendly barista at a busy neighborhood café. The learner is a customer walking up to the counter. Take their order, suggest items, ask about size/milk/to-go, tell them the total"},
+  {id:"lunch",ic:"🍽️",t:"Lunch with a friend",d:"Talk about your day",
+   role:"the learner's good friend, having lunch together. Ask about their day and work, share things about your own day, react naturally, ask follow-up questions"},
+  {id:"street",ic:"🌮",t:"Street food",d:"Order at a stand or food cart",
+   role:"a street food vendor at a busy stand. Explain what you have, ask how many and what toppings, handle payment and change"},
+  {id:"taxi",ic:"🚕",t:"Taxi & directions",d:"Get where you're going",
+   role:"a talkative taxi driver. Ask where they're going, chat about the city, mention traffic, discuss the fare"},
+  {id:"hotel",ic:"🏨",t:"Hotel check-in",d:"Check in and ask questions",
+   role:"a hotel front-desk clerk. Check the learner in, ask for their name and ID, explain breakfast hours, Wi-Fi, and answer questions"},
+  {id:"market",ic:"🥑",t:"Market",d:"Buy produce, ask prices",
+   role:"a vendor at an outdoor produce market. Offer fruit and vegetables, quote prices by the kilo, allow a little friendly haggling"},
+  {id:"pharmacy",ic:"💊",t:"Pharmacy",d:"Describe how you feel",
+   role:"a pharmacist. Ask about symptoms, how long they've had them, allergies, and recommend an over-the-counter option with simple instructions"},
+  {id:"party",ic:"🎉",t:"Meeting someone new",d:"Small talk at a party",
+   role:"someone the learner just met at a friend's party. Make small talk: names, where you're from, work, hobbies, how you know the host"},
+  {id:"custom",ic:"✍️",t:"Custom",d:"Describe any situation",role:""}
+];
+
+const LEVELS = {
+  beginner:"Beginner. Use short, simple sentences (mostly present tense), very common vocabulary, one question at a time. If the learner seems stuck, rephrase more simply.",
+  intermediate:"Intermediate. Speak naturally but clearly, use a mix of tenses and everyday expressions, occasionally a common regional expression.",
+  advanced:"Advanced. Speak at natural native level with idioms and regional slang where it fits, and push the learner with open-ended questions."
+};
+
+/* ---------- settings ---------- */
+const DEFAULTS = {azKey:"",azRegion:"eastus",clKey:"",model:"claude-sonnet-5-5",autoplay:"1",
+  scenario:"cafe",level:"beginner",country:"MX",gender:"F",speed:"-15%",custom:""};
+let S = load();
+function load(){ try{ return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem("hablemos.v1")||"{}")); }catch(e){ return {...DEFAULTS}; } }
+function save(){ try{ localStorage.setItem("hablemos.v1", JSON.stringify(S)); }catch(e){} }
+
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); }
+function toast(msg, ms=2200){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none", ms); }
+function seg(id, key, onChange){
+  const el=$(id);
+  const paint=()=>el.querySelectorAll("button").forEach(b=>b.classList.toggle("sel", b.dataset.v===S[key]));
+  el.addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; S[key]=b.dataset.v; save(); paint(); onChange&&onChange(); });
+  paint();
+}
+function needKeys(){ return !S.azKey || !S.azRegion || !S.clKey; }
+
+/* ---------- audio / TTS ---------- */
+let unlocked=false;
+function unlockAudio(){
+  if(unlocked) return; unlocked=true;
+  const p=$("#player");
+  p.src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+  p.play().catch(()=>{});
+}
+const ttsCache=new Map();
+function voice(){ const v=VOICES[S.country]||VOICES.MX; return {name:v[S.gender]||v.F, loc:v.loc}; }
+function speechConfig(){
+  const sdk=window.SpeechSDK;
+  if(!sdk) throw new Error("Speech SDK failed to load. Check your connection and reload.");
+  return sdk.SpeechConfig.fromSubscription(S.azKey.trim(), S.azRegion.trim());
+}
+function synth(text, rate){
+  const v=voice(); const key=v.name+"|"+rate+"|"+text;
+  if(ttsCache.has(key)) return Promise.resolve(ttsCache.get(key));
+  const sdk=window.SpeechSDK; const cfg=speechConfig();
+  cfg.speechSynthesisOutputFormat=sdk.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
+  const ssml=`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${v.loc}"><voice name="${v.name}"><prosody rate="${rate}">${esc(text)}</prosody></voice></speak>`;
+  return new Promise((res,rej)=>{
+    const s=new sdk.SpeechSynthesizer(cfg, null);
+    s.speakSsmlAsync(ssml, r=>{
+      s.close();
+      if(r.reason===sdk.ResultReason.SynthesizingAudioCompleted){
+        const url=URL.createObjectURL(new Blob([r.audioData],{type:"audio/mpeg"}));
+        ttsCache.set(key,url); res(url);
+      } else rej(new Error(r.errorDetails||"Speech synthesis failed"));
+    }, e=>{ s.close(); rej(new Error(String(e))); });
+  });
+}
+async function say(text, rate){
+  try{
+    const url=await synth(text, rate ?? S.speed);
+    await new Promise(res=>{ const p=$("#player"); p.onended=res; p.onerror=res; p.src=url; p.play().catch(()=>res()); });
+  }catch(e){ toast("Voice error: "+e.message, 4000); }
+}
+
+/* ---------- Claude ---------- */
+async function claude(system, messages, maxTokens=1200){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"content-type":"application/json","x-api-key":S.clKey.trim(),"anthropic-version":"2023-06-01",
+             "anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:S.model,max_tokens:maxTokens,system,messages})
+  });
+  if(!r.ok){ let t=await r.text(); throw new Error("Claude "+r.status+": "+t.slice(0,240)); }
+  const j=await r.json();
+  return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+function parseJSON(t){
+  const a=t.indexOf("{"), b=t.lastIndexOf("}");
+  if(a<0||b<a) throw new Error("Tutor reply wasn't in the expected format");
+  return JSON.parse(t.slice(a,b+1));
+}
+
+function systemPrompt(){
+  const sc=session.scenario; const reg=VOICES[S.country].name;
+  return `You are a friendly Spanish conversation partner and tutor for an English-speaking adult learner (an American).
+DIALECT: Spanish as spoken in ${reg}. Use vocabulary, forms of address and expressions natural there.
+LEVEL: ${LEVELS[S.level]}
+SCENARIO: You are ${sc.role}. Stay in character in "reply". Keep the conversation moving and realistic.
+
+Each learner turn gives you either their speech-recognition transcript with automated pronunciation scores (0-100 per word), or typed text. The transcript may contain errors CAUSED by mispronunciation (a wrong but similar-sounding word usually means the learner mispronounced the intended word). Infer what they meant.
+
+Respond ONLY with one JSON object, no markdown, no code fences:
+{
+ "reply": "your in-character reply in Spanish, 1-3 short sentences, usually ending with something that invites a response",
+ "reply_en": "English translation of reply",
+ "correction": null OR {
+    "corrected": "the learner's sentence with grammar, agreement, verb, or word-choice errors fixed (minimal changes)",
+    "natural": "how a native speaker from ${reg} would most naturally say the same thing (omit or repeat corrected if identical)",
+    "notes": ["one short English explanation per fix"]
+ },
+ "pronunciation": [{"word":"word from their speech","tip":"short, concrete English tip on the specific sound(s), e.g. tap the single r, keep the vowel pure, soft d between vowels"}],
+ "hint": "one natural thing the learner could say next, in Spanish, at their level"
+}
+Rules:
+- "correction" is null only if the learner's sentence was correct AND natural. Ignore missing punctuation, capitalization, and accents in transcripts (those come from the recognizer).
+- "pronunciation": only words scored below 75, at most 3, most important first. Empty array for typed turns or if all words scored 75+.
+- Notes and tips in English; reply, corrected, natural, hint in Spanish.
+- If the learner writes or speaks in English, help them say it in Spanish via "correction" and continue in character.`;
+}
+
+/* ---------- speech recognition + pronunciation assessment ---------- */
+let rec=null, audioCfg=null, segs=[], recording=false;
+function startRec(){
+  const sdk=window.SpeechSDK; const cfg=speechConfig();
+  cfg.speechRecognitionLanguage=RECOG_LOCALE;
+  cfg.outputFormat=sdk.OutputFormat.Detailed;
+  cfg.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs,"1500");
+  audioCfg=sdk.AudioConfig.fromDefaultMicrophoneInput();
+  rec=new sdk.SpeechRecognizer(cfg, audioCfg);
+  const pa=new sdk.PronunciationAssessmentConfig("", sdk.PronunciationAssessmentGradingSystem.HundredMark,
+            sdk.PronunciationAssessmentGranularity.Phoneme, false);
+  pa.applyTo(rec);
+  segs=[]; let finalText="";
+  rec.recognizing=(s,e)=>{ $("#live").textContent=(finalText+" "+e.result.text).trim(); };
+  rec.recognized=(s,e)=>{
+    if(e.result.reason===sdk.ResultReason.RecognizedSpeech){
+      try{ segs.push(JSON.parse(e.result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult))); }catch(err){}
+      finalText=(finalText+" "+e.result.text).trim(); $("#live").textContent=finalText;
+    }
+  };
+  rec.canceled=(s,e)=>{ if(e.reason===sdk.CancellationReason.Error){ toast("Mic/Azure error: "+e.errorDetails,5000); stopRec(true); } };
+  rec.startContinuousRecognitionAsync(()=>{}, err=>{ toast("Couldn't start mic: "+err,5000); stopRec(true); });
+}
+function stopRec(abort){
+  return new Promise(res=>{
+    const r=rec; rec=null;
+    const done=()=>{ try{ r&&r.close(); }catch(e){} try{ audioCfg&&audioCfg.close(); }catch(e){} audioCfg=null; res(); };
+    if(!r) return res();
+    if(abort) return done();
+    r.stopContinuousRecognitionAsync(done, done);
+  });
+}
+function aggregate(list){
+  let words=[], text=[], acc=0, flu=0, pron=0, n=0;
+  for(const j of list){
+    const nb=j.NBest&&j.NBest[0]; if(!nb) continue;
+    text.push(nb.Display||j.DisplayText||"");
+    const pa=nb.PronunciationAssessment||nb;
+    const ws=(nb.Words||[]).filter(x=>((x.PronunciationAssessment||x).ErrorType)!=="Insertion");
+    const k=Math.max(ws.length,1);
+    acc+=(pa.AccuracyScore??0)*k; flu+=(pa.FluencyScore??0)*k; pron+=(pa.PronScore??pa.AccuracyScore??0)*k; n+=k;
+    for(const x of ws){
+      const p=x.PronunciationAssessment||x;
+      words.push({w:x.Word, s:Math.round(p.AccuracyScore??0), err:p.ErrorType||"None",
+        ph:(x.Phonemes||[]).filter(q=>q.Phoneme).map(q=>({p:q.Phoneme, s:Math.round((q.PronunciationAssessment||q).AccuracyScore??0)}))});
+    }
+  }
+  const r=v=>n?Math.round(v/n):null;
+  return {text:text.join(" ").trim(), words, acc:r(acc), flu:r(flu), pron:r(pron)};
+}
+
+/* ---------- session ---------- */
+let session=null, busy=false;
+function cls(s){ return s>=80?"g":s>=60?"o":"b"; }
+
+function addTutor(d){
+  const el=document.createElement("div"); el.className="msg tutor";
+  el.innerHTML=`<div class="es">${esc(d.reply)}</div><div class="en">${esc(d.reply_en)}</div>
+    <div class="tools"><button class="chip" data-a="play">▶︎ Play</button><button class="chip" data-a="slow">🐢 Slow</button><button class="chip" data-a="en">EN</button></div>`;
+  el.addEventListener("click",e=>{
+    const a=e.target.closest("[data-a]")?.dataset.a;
+    if(a==="play") say(d.reply); else if(a==="slow") say(d.reply,"-35%"); else if(a==="en") el.classList.toggle("showen");
+  });
+  $("#chat").appendChild(el); scrollDown();
+  if(S.autoplay==="1") say(d.reply);
+}
+function addYou(turn){
+  const el=document.createElement("div"); el.className="msg you";
+  if(turn.words&&turn.words.length){
+    el.innerHTML=`<div class="es">${turn.words.map((w,i)=>`<span class="w ${cls(w.s)}" data-i="${i}">${esc(w.w)}</span>`).join(" ")}</div>`;
+    el.addEventListener("click",e=>{
+      const sp=e.target.closest(".w"); if(!sp) return;
+      const w=turn.words[+sp.dataset.i];
+      toast(`${w.w}: ${w.s}/100${w.err!=="None"?" ("+w.err+")":""}`); say(w.w,"-30%");
+    });
+  } else el.innerHTML=`<div class="es">${esc(turn.text)}</div>`;
+  $("#chat").appendChild(el); scrollDown();
+}
+function addFeedback(turn, d){
+  const el=document.createElement("div"); el.className="fb";
+  let h="";
+  if(turn.pron!=null){
+    h+=`<div class="scores"><span class="pill ${cls(turn.pron)}">Pronunciation ${turn.pron}</span><span class="pill ${cls(turn.acc)}">Accuracy ${turn.acc}</span><span class="pill ${cls(turn.flu)}">Fluency ${turn.flu}</span></div>`;
+  }
+  const c=d.correction;
+  if(c&&c.corrected){
+    h+=`<div class="lbl">Corrected</div><div class="line"><div class="tx">${esc(c.corrected)}</div><button class="play" data-say="${esc(c.corrected)}">▶︎</button></div>`;
+    if(c.natural&&c.natural.trim()!==c.corrected.trim())
+      h+=`<div class="lbl">More natural</div><div class="line"><div class="tx">${esc(c.natural)}</div><button class="play" data-say="${esc(c.natural)}">▶︎</button></div>`;
+    if(c.notes&&c.notes.length) h+=`<ul>${c.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`;
+  } else h+=`<div class="ok">✓ Sentence was correct and natural</div>`;
+  if(d.pronunciation&&d.pronunciation.length){
+    h+=`<div class="lbl">Pronunciation</div>`+d.pronunciation.map(p=>
+      `<div class="line"><div class="tx" style="font-size:14.5px"><b>${esc(p.word)}</b>: ${esc(p.tip)}</div><button class="play" data-say="${esc(p.word)}" data-rate="-30%">▶︎</button></div>`).join("");
+  }
+  el.innerHTML=h;
+  el.addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say, b.dataset.rate||"-15%"); });
+  $("#chat").appendChild(el); scrollDown();
+}
+function scrollDown(){ const s=$("#chatScroll"); requestAnimationFrame(()=>s.scrollTop=s.scrollHeight); }
+function setBusy(b, label){
+  busy=b; $("#mic").disabled=b; $("#typeSend").disabled=b;
+  let t=$("#typingEl");
+  if(b){ if(!t){ t=document.createElement("div"); t.id="typingEl"; t.className="typing"; $("#chat").appendChild(t);} t.textContent=label||"…"; scrollDown(); }
+  else if(t) t.remove();
+}
+
+async function startSession(){
+  if(needKeys()){ toast("Add your keys first"); openSettings(); return; }
+  unlockAudio();
+  let sc=SCENARIOS.find(s=>s.id===S.scenario)||SCENARIOS[0];
+  if(sc.id==="custom"){
+    const txt=$("#customText").value.trim();
+    if(!txt){ toast("Describe your custom situation"); return; }
+    S.custom=txt; save();
+    sc={...sc, role:`a natural participant in this situation described by the learner: "${txt}". Choose the most fitting role for yourself`};
+  }
+  session={scenario:sc, messages:[], log:[], lastHint:""};
+  $("#chat").innerHTML=""; $("#live").textContent="";
+  $("#chatTitle").textContent=sc.ic+" "+sc.t;
+  show("s-chat");
+  await turn({kind:"start"});
+}
+
+async function turn(t){
+  let content;
+  if(t.kind==="start") content="[START] Open the scenario with your first line in character. Set correction to null and pronunciation to [].";
+  else if(t.kind==="typed") content=`LEARNER TYPED: "${t.text}"`;
+  else {
+    const ws=t.words.map(w=>`${w.w} ${w.s}${w.err!=="None"?" ["+w.err+"]":""}${w.s<75&&w.ph.length?" {"+w.ph.map(p=>p.p+":"+p.s).join(" ")+"}":""}`).join(", ");
+    content=`LEARNER SAID (speech recognition): "${t.text}"\nOVERALL: pronunciation ${t.pron}, accuracy ${t.acc}, fluency ${t.flu}\nWORD SCORES: ${ws}`;
+  }
+  session.messages.push({role:"user",content});
+  setBusy(true, t.kind==="start"?"Setting the scene…":"Tutor is thinking…");
+  try{
+    const raw=await claude(systemPrompt(), session.messages);
+    const d=parseJSON(raw);
+    session.messages.push({role:"assistant",content:raw});
+    setBusy(false);
+    if(t.kind!=="start"){ addFeedback(t,d); session.log.push({said:t.text, pron:t.pron, low:(t.words||[]).filter(w=>w.s<70).map(w=>w.w), correction:d.correction}); }
+    session.lastHint=d.hint||"";
+    addTutor(d);
+  }catch(e){
+    session.messages.pop(); setBusy(false);
+    const el=document.createElement("div"); el.className="typing err"; el.textContent="⚠︎ "+e.message; $("#chat").appendChild(el); scrollDown();
+  }
+}
+
+async function micTap(){
+  if(busy) return;
+  unlockAudio();
+  const m=$("#mic");
+  if(!recording){
+    try{ $("#player").pause(); startRec(); recording=true; m.classList.add("rec"); $("#live").textContent="Listening… tap to send"; }
+    catch(e){ toast(e.message,4000); }
+  } else {
+    recording=false; m.classList.remove("rec"); $("#live").textContent="Scoring…";
+    await stopRec(false);
+    const t=aggregate(segs); $("#live").textContent="";
+    if(!t.text||!t.words.length){ toast("Didn't catch that. Try again a little louder."); return; }
+    t.kind="speech"; addYou(t); turn(t);
+  }
+}
+function sendTyped(){
+  const v=$("#typeIn").value.trim(); if(!v||busy) return;
+  unlockAudio(); $("#typeIn").value="";
+  const t={kind:"typed",text:v,words:[],pron:null}; addYou(t); turn(t);
+}
+
+async function review(){
+  if(!session||!session.log.length){ toast("Say a few things first"); return; }
+  if(recording){ recording=false; $("#mic").classList.remove("rec"); await stopRec(true); }
+  openSheet(`<h2>Session review</h2><p class="note">Putting it together…</p>`);
+  const pr=session.log.filter(l=>l.pron!=null).map(l=>l.pron);
+  const avg=pr.length?Math.round(pr.reduce((a,b)=>a+b,0)/pr.length):null;
+  const lines=session.log.map((l,i)=>`${i+1}. "${l.said}"${l.pron!=null?" (pron "+l.pron+")":""}${l.low.length?" low-scoring words: "+l.low.join(", "):""}${l.correction?" -> corrected: "+l.correction.corrected:""}`).join("\n");
+  try{
+    const raw=await claude(
+      `You are a Spanish tutor reviewing a learner's speaking practice session (${VOICES[S.country].name} Spanish, level ${S.level}, scenario: ${session.scenario.t}). Respond ONLY with JSON: {"summary":"2-3 encouraging but honest sentences in English","strengths":["..."],"focus":["the 2-3 most important things to work on, specific (grammar patterns or sounds)"],"phrases":[{"es":"useful phrase for this scenario","en":"translation"}]} with 3-5 phrases.`,
+      [{role:"user",content:"Learner turns:\n"+lines}], 900);
+    const d=parseJSON(raw);
+    openSheet(`<h2>Session review</h2>
+      ${avg!=null?`<div class="scores" style="display:flex;gap:6px;margin:8px 0"><span class="pill ${cls(avg)}">Avg pronunciation ${avg}</span><span class="pill">${session.log.length} turns</span></div>`:""}
+      <p>${esc(d.summary)}</p>
+      <div class="fb" style="margin-top:8px">
+        <div class="lbl" style="margin-top:0">Doing well</div><ul>${(d.strengths||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
+        <div class="lbl">Work on</div><ul>${(d.focus||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
+        <div class="lbl">Phrases to keep</div>
+        ${(d.phrases||[]).map(p=>`<div class="line"><div class="tx">${esc(p.es)}<div class="note" style="margin:0">${esc(p.en)}</div></div><button class="play" data-say="${esc(p.es)}">▶︎</button></div>`).join("")}
+      </div>
+      <div style="height:14px"></div>
+      <div class="row"><button class="btn ghost" id="keepGoing">Keep talking</button><button class="btn" id="newConvo">New scenario</button></div>`);
+    $("#keepGoing").onclick=closeSheet;
+    $("#newConvo").onclick=()=>{ closeSheet(); show("s-home"); };
+  }catch(e){ openSheet(`<h2>Session review</h2><p class="err">${esc(e.message)}</p><button class="btn ghost" onclick="closeSheet()">Close</button>`); }
+}
+function openSheet(html){ $("#sheetIn").innerHTML=html; $("#sheet").classList.add("on"); }
+function closeSheet(){ $("#sheet").classList.remove("on"); }
+$("#sheet").addEventListener("click",e=>{ if(e.target.id==="sheet") closeSheet(); const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say); });
+
+/* ---------- settings screen ---------- */
+let settingsFrom="s-home";
+function openSettings(){
+  $("#azKey").value=S.azKey; $("#azRegion").value=S.azRegion; $("#clKey").value=S.clKey; $("#model").value=S.model;
+  $("#testOut").textContent=""; show("s-settings");
+}
+function readSettings(){
+  S.azKey=$("#azKey").value.trim(); S.azRegion=$("#azRegion").value.trim().toLowerCase(); S.clKey=$("#clKey").value.trim(); S.model=$("#model").value; save();
+}
+$("#saveSettings").onclick=()=>{ readSettings(); if(needKeys()){ toast("All three fields are required"); return; } toast("Saved"); show("s-home"); };
+$("#setClose").onclick=()=>{ if(needKeys()){ toast("Add your keys to continue"); return; } show("s-home"); };
+$("#openSettings").onclick=openSettings;
+$("#testKeys").onclick=async()=>{
+  readSettings(); unlockAudio(); const out=$("#testOut"); out.textContent="Testing…"; let msg=[];
+  try{ await say("¡Hola! Las claves de Azure funcionan."); msg.push("✓ Azure voice OK"); }catch(e){ msg.push("✗ Azure: "+e.message); }
+  try{ await claude("Reply with the single word: ok",[{role:"user",content:"ping"}],10); msg.push("✓ Claude OK"); }catch(e){ msg.push("✗ "+e.message); }
+  out.textContent=msg.join("  ·  ");
+};
+seg("#autoplaySeg","autoplay");
+
+/* ---------- home ---------- */
+function renderScenarios(){
+  $("#scenarios").innerHTML=SCENARIOS.map(s=>`<button class="card ${s.id===S.scenario?"sel":""}" data-id="${s.id}"><div class="ic">${s.ic}</div><div class="t">${esc(s.t)}</div><div class="d">${esc(s.d)}</div></button>`).join("");
+  $("#customWrap").style.display=S.scenario==="custom"?"block":"none";
+}
+$("#scenarios").addEventListener("click",e=>{ const c=e.target.closest(".card"); if(!c) return; S.scenario=c.dataset.id; save(); renderScenarios(); });
+$("#customText").value=S.custom||"";
+$("#country").innerHTML=Object.entries(VOICES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("");
+$("#country").value=S.country;
+$("#country").onchange=e=>{ S.country=e.target.value; save(); };
+seg("#levelSeg","level"); seg("#genderSeg","gender"); seg("#speedSeg","speed");
+renderScenarios();
+$("#startBtn").onclick=startSession;
+
+/* ---------- chat controls ---------- */
+$("#mic").onclick=micTap;
+$("#kbBtn").onclick=()=>{ $("#typebox").classList.toggle("on"); if($("#typebox").classList.contains("on")) $("#typeIn").focus(); };
+$("#typeSend").onclick=sendTyped;
+$("#typeIn").addEventListener("keydown",e=>{ if(e.key==="Enter") sendTyped(); });
+$("#hintBtn").onclick=()=>{
+  if(!session||!session.lastHint){ toast("No hint yet"); return; }
+  openSheet(`<h2>💡 You could say…</h2><div class="fb"><div class="line"><div class="tx">${esc(session.lastHint)}</div><button class="play" data-say="${esc(session.lastHint)}">▶︎</button></div></div><div style="height:12px"></div><button class="btn ghost" onclick="closeSheet()">Got it</button>`);
+};
+$("#endBtn").onclick=review;
+$("#backBtn").onclick=async()=>{ if(recording){ recording=false; $("#mic").classList.remove("rec"); await stopRec(true); } show("s-home"); };
+
+/* ---------- boot ---------- */
+if(needKeys()) openSettings(); else show("s-home");
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
