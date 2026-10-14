@@ -71,7 +71,13 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 /* bottom bar */
 .bar{padding:10px 16px calc(12px + var(--safe-b));border-top:1px solid var(--line);background:var(--bg)}
 .live{min-height:22px;font-size:15px;color:var(--muted);text-align:center;margin-bottom:8px}
-.ctrls{display:flex;align-items:center;justify-content:space-between}
+.ctrls{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+.ctrls .l{display:flex;gap:10px;justify-self:start}.ctrls .r{display:flex;gap:10px;justify-self:end}
+.askrow{display:flex;gap:8px;margin-top:10px}.askrow .btn{padding:12px}
+#askMic.rec,#practiceBtn.rec{background:var(--bad);color:#fff}
+.say{font-size:20px;font-weight:600}
+.phon{font-size:13.5px;color:var(--accent);margin-top:2px}
+#askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
 .side{width:52px;height:52px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:20px}
 #mic{width:76px;height:76px;border-radius:50%;background:var(--accent);display:grid;place-items:center;
   box-shadow:0 0 0 0 rgba(47,208,168,.5);transition:transform .1s}
@@ -159,9 +165,9 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
     <div id="typebox"><input id="typeIn" placeholder="Escribe en español…" autocapitalize="sentences"><button id="typeSend">Send</button></div>
     <div class="live" id="live"></div>
     <div class="ctrls">
-      <button class="side" id="kbBtn" aria-label="Type instead">⌨︎</button>
+      <div class="l"><button class="side" id="kbBtn" aria-label="Type instead">⌨︎</button><button class="side" id="askBtn" aria-label="Ask in English">❓</button></div>
       <button id="mic" aria-label="Speak"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg></button>
-      <button class="side" id="hintBtn" aria-label="Hint">💡</button>
+      <div class="r"><button class="side" id="hintBtn" aria-label="Hint">💡</button></div>
     </div>
   </div>
 </section>
@@ -317,23 +323,27 @@ Rules:
 }
 
 /* ---------- speech recognition + pronunciation assessment ---------- */
-let rec=null, audioCfg=null, segs=[], recording=false;
-function startRec(){
+let rec=null, audioCfg=null, segs=[], recording=false, recText="";
+// opts: {locale, ref (reference text for scripted practice), assess (bool), live (element)}
+function startRec(opts={}){
   const sdk=window.SpeechSDK; const cfg=speechConfig();
-  cfg.speechRecognitionLanguage=RECOG_LOCALE;
+  const live=opts.live||$("#live"); const assess=opts.assess!==false;
+  cfg.speechRecognitionLanguage=opts.locale||RECOG_LOCALE;
   cfg.outputFormat=sdk.OutputFormat.Detailed;
   cfg.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs,"1500");
   audioCfg=sdk.AudioConfig.fromDefaultMicrophoneInput();
   rec=new sdk.SpeechRecognizer(cfg, audioCfg);
-  const pa=new sdk.PronunciationAssessmentConfig("", sdk.PronunciationAssessmentGradingSystem.HundredMark,
-            sdk.PronunciationAssessmentGranularity.Phoneme, false);
-  pa.applyTo(rec);
-  segs=[]; let finalText="";
-  rec.recognizing=(s,e)=>{ $("#live").textContent=(finalText+" "+e.result.text).trim(); };
+  if(assess){
+    const pa=new sdk.PronunciationAssessmentConfig(opts.ref||"", sdk.PronunciationAssessmentGradingSystem.HundredMark,
+              sdk.PronunciationAssessmentGranularity.Phoneme, !!opts.ref);
+    pa.applyTo(rec);
+  }
+  segs=[]; recText=""; let finalText="";
+  rec.recognizing=(s,e)=>{ live.textContent=(finalText+" "+e.result.text).trim(); };
   rec.recognized=(s,e)=>{
     if(e.result.reason===sdk.ResultReason.RecognizedSpeech){
       try{ segs.push(JSON.parse(e.result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult))); }catch(err){}
-      finalText=(finalText+" "+e.result.text).trim(); $("#live").textContent=finalText;
+      finalText=(finalText+" "+e.result.text).trim(); recText=finalText; live.textContent=finalText;
     }
   };
   rec.canceled=(s,e)=>{ if(e.reason===sdk.CancellationReason.Error){ toast("Mic/Azure error: "+e.errorDetails,5000); stopRec(true); } };
@@ -374,11 +384,13 @@ function cls(s){ return s>=80?"g":s>=60?"o":"b"; }
 function addTutor(d){
   const el=document.createElement("div"); el.className="msg tutor";
   el.innerHTML=`<div class="es">${esc(d.reply)}</div><div class="en">${esc(d.reply_en)}</div>
-    <div class="tools"><button class="chip" data-a="play">▶︎ Play</button><button class="chip" data-a="slow">🐢 Slow</button><button class="chip" data-a="en">EN</button></div>`;
+    <div class="tools"><button class="chip" data-a="play">▶︎ Play</button><button class="chip" data-a="slow">🐢 Slow</button><button class="chip" data-a="en">EN</button><button class="chip" data-a="ask">❓ Explain</button></div>`;
   el.addEventListener("click",e=>{
     const a=e.target.closest("[data-a]")?.dataset.a;
     if(a==="play") say(d.reply); else if(a==="slow") say(d.reply,"-35%"); else if(a==="en") el.classList.toggle("showen");
+    else if(a==="ask") openAsk(`What does "${d.reply}" mean? Break it down for me.`, true);
   });
+  session.transcript.push("TUTOR: "+d.reply);
   $("#chat").appendChild(el); scrollDown();
   if(S.autoplay==="1") say(d.reply);
 }
@@ -393,6 +405,7 @@ function addYou(turn){
     });
   } else el.innerHTML=`<div class="es">${esc(turn.text)}</div>`;
   $("#chat").appendChild(el); scrollDown();
+  session.transcript.push("LEARNER: "+turn.text);
 }
 function addFeedback(turn, d){
   const el=document.createElement("div"); el.className="fb";
@@ -433,7 +446,7 @@ async function startSession(){
     S.custom=txt; save();
     sc={...sc, role:`a natural participant in this situation described by the learner: "${txt}". Choose the most fitting role for yourself`};
   }
-  session={scenario:sc, messages:[], log:[], lastHint:""};
+  session={scenario:sc, messages:[], log:[], lastHint:"", transcript:[]};
   $("#chat").innerHTML=""; $("#live").textContent="";
   $("#chatTitle").textContent=sc.ic+" "+sc.t;
   show("s-chat");
@@ -513,8 +526,100 @@ async function review(){
   }catch(e){ openSheet(`<h2>Session review</h2><p class="err">${esc(e.message)}</p><button class="btn ghost" onclick="closeSheet()">Close</button>`); }
 }
 function openSheet(html){ $("#sheetIn").innerHTML=html; $("#sheet").classList.add("on"); }
-function closeSheet(){ $("#sheet").classList.remove("on"); }
-$("#sheet").addEventListener("click",e=>{ if(e.target.id==="sheet") closeSheet(); const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say); });
+function closeSheet(){
+  $("#sheet").classList.remove("on");
+  if(askRecMode){ askRecMode=null; stopRec(true); }
+}
+$("#sheet").addEventListener("click",e=>{ if(e.target.id==="sheet") closeSheet(); const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say, b.dataset.rate); });
+
+/* ---------- Ask in English ---------- */
+let askRecMode=null, askBusy=false, lastAsk=null;
+async function openAsk(prefill, autoSubmit){
+  if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#live").textContent=""; await stopRec(true); }
+  unlockAudio();
+  openSheet(`<h2>❓ Ask in English</h2>
+    <p class="note" style="margin-top:0">"What does ___ mean?" · "How do I say ___?" · "Why is it ___ and not ___?"</p>
+    <textarea id="askIn" rows="2" placeholder="Type or tap Speak…"></textarea>
+    <div id="askLive"></div>
+    <div class="askrow"><button class="btn ghost" id="askMic">🎤 Speak</button><button class="btn" id="askGo">Ask</button></div>
+    <div id="askOut"></div>`);
+  $("#askIn").value=prefill||"";
+  $("#askGo").onclick=()=>askSubmit();
+  $("#askMic").onclick=askMicTap;
+  if(autoSubmit&&prefill) askSubmit();
+}
+async function askMicTap(){
+  const b=$("#askMic");
+  if(askRecMode==="q"){
+    askRecMode=null; b.classList.remove("rec"); b.textContent="🎤 Speak";
+    await stopRec(false);
+    if(recText){ $("#askIn").value=recText; askSubmit(); } else toast("Didn't catch that");
+    return;
+  }
+  if(askRecMode) return;
+  try{ startRec({locale:"en-US", assess:false, live:$("#askLive")}); askRecMode="q"; b.classList.add("rec"); b.textContent="⏹ Done"; }
+  catch(e){ toast(e.message,4000); }
+}
+async function askSubmit(){
+  const q=$("#askIn").value.trim(); if(!q||askBusy) return;
+  askBusy=true; $("#askLive").textContent=""; $("#askOut").innerHTML=`<p class="note">Thinking…</p>`;
+  const reg=VOICES[S.country].name;
+  const ctx=session&&session.transcript.length?session.transcript.slice(-8).join("\n"):"(no conversation yet)";
+  const sys=`You are a patient Spanish tutor for an English-speaking American adult learner (level: ${S.level}). Teach Spanish as spoken in ${reg}.
+The learner pauses their roleplay to ask a question in English. Recent conversation for context:
+${ctx}
+
+Answer the question. If they ask how to say something, give the most natural way a person from ${reg} would say it. If they ask what something means, translate and explain it. If it's a grammar or usage question, explain briefly with an example.
+Respond ONLY with JSON, no markdown:
+{"explanation":"clear English answer, 1-3 short sentences",
+ "say":"the key Spanish phrase to learn and practice (null only for a pure grammar question with no phrase)",
+ "say_en":"English meaning of say",
+ "phonetic":"easy English-style pronunciation of say with stressed syllable in caps, e.g. meh goos-TAH-ree-ah",
+ "breakdown":[{"es":"word or chunk from say","en":"meaning or short note"}],
+ "alternatives":[{"es":"another way to say it","note":"when to use it (more casual, formal, regional...)"}]}
+Keep breakdown to the useful chunks (max 6) and alternatives to 0-2.`;
+  try{
+    const d=parseJSON(await claude(sys,[{role:"user",content:q}],900));
+    lastAsk=d; renderAsk(d);
+  }catch(e){ $("#askOut").innerHTML=`<p class="err">${esc(e.message)}</p>`; }
+  askBusy=false;
+}
+function renderAsk(d){
+  let h=`<div class="fb" style="margin-top:12px"><div>${esc(d.explanation)}</div>`;
+  if(d.say){
+    h+=`<div class="lbl">Say it</div>
+      <div class="line"><div class="tx"><div class="say">${esc(d.say)}</div>${d.phonetic?`<div class="phon">${esc(d.phonetic)}</div>`:""}<div class="note" style="margin:2px 0 0">${esc(d.say_en||"")}</div></div>
+      <button class="play" data-say="${esc(d.say)}">▶︎</button><button class="play" data-say="${esc(d.say)}" data-rate="-40%">🐢</button></div>`;
+    if(d.breakdown&&d.breakdown.length) h+=`<div class="lbl">Breakdown</div><ul>${d.breakdown.map(b=>`<li><b>${esc(b.es)}</b>: ${esc(b.en)}</li>`).join("")}</ul>`;
+    if(d.alternatives&&d.alternatives.length) h+=`<div class="lbl">Other ways</div>`+d.alternatives.map(a=>
+      `<div class="line"><div class="tx" style="font-size:15px">${esc(a.es)}<div class="note" style="margin:0">${esc(a.note)}</div></div><button class="play" data-say="${esc(a.es)}">▶︎</button></div>`).join("");
+    h+=`<div class="askrow"><button class="btn" id="practiceBtn">🎤 Practice saying it</button></div><div id="practiceLive" class="note"></div><div id="practiceOut"></div>`;
+  }
+  h+=`</div>`;
+  $("#askOut").innerHTML=h;
+  if(d.say) $("#practiceBtn").onclick=practiceTap;
+}
+async function practiceTap(){
+  const b=$("#practiceBtn");
+  if(askRecMode==="p"){
+    askRecMode=null; b.classList.remove("rec"); b.textContent="🎤 Try again"; $("#practiceLive").textContent="Scoring…";
+    await stopRec(false);
+    const t=aggregate(segs); $("#practiceLive").textContent="";
+    if(!t.words.length){ toast("Didn't catch that. Try again."); return; }
+    const low=t.words.filter(w=>w.s<70);
+    $("#practiceOut").innerHTML=`<div class="scores" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+        <span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span><span class="pill ${cls(t.acc)}">Accuracy ${t.acc}</span></div>
+      <div style="margin-top:8px;font-size:17px">${t.words.map(w=>`<span class="w ${cls(w.s)}" data-say="${esc(w.w)}" data-rate="-30%">${esc(w.w)}</span>`).join(" ")}</div>
+      <div class="note">${low.length?"Tap a red/yellow word to hear it, then try again.":(t.pron>=85?"¡Excelente! Now try using it in the conversation.":"Good. Try once more for a cleaner score.")}</div>`;
+    return;
+  }
+  if(askRecMode) return;
+  try{
+    $("#player").pause();
+    startRec({locale:RECOG_LOCALE, ref:lastAsk.say, assess:true, live:$("#practiceLive")});
+    askRecMode="p"; b.classList.add("rec"); b.textContent="⏹ Done";
+  }catch(e){ toast(e.message,4000); }
+}
 
 /* ---------- settings screen ---------- */
 let settingsFrom="s-home";
@@ -560,6 +665,7 @@ $("#hintBtn").onclick=()=>{
   openSheet(`<h2>💡 You could say…</h2><div class="fb"><div class="line"><div class="tx">${esc(session.lastHint)}</div><button class="play" data-say="${esc(session.lastHint)}">▶︎</button></div></div><div style="height:12px"></div><button class="btn ghost" onclick="closeSheet()">Got it</button>`);
 };
 $("#endBtn").onclick=review;
+$("#askBtn").onclick=()=>{ if(busy){ toast("Wait for the tutor to finish"); return; } openAsk(""); };
 $("#backBtn").onclick=async()=>{ if(recording){ recording=false; $("#mic").classList.remove("rec"); await stopRec(true); } show("s-home"); };
 
 /* ---------- boot ---------- */
