@@ -76,6 +76,12 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 .askrow{display:flex;gap:8px;margin-top:10px}.askrow .btn{padding:12px}
 #askMic.rec,#practiceBtn.rec{background:var(--bad);color:#fff}
 .say{font-size:20px;font-weight:600}
+.guide details{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-top:10px;padding:0 12px}
+.guide summary{padding:12px 0;font-weight:600;cursor:pointer}
+.guide ol{margin:0 0 10px;padding-left:20px;font-size:14.5px;color:#c9d6de}
+.guide li{margin-bottom:6px}
+.guide .tip{font-size:13.5px;color:#c9d6de;background:var(--panel2);border-radius:10px;padding:10px;margin:0 0 12px}
+.guide code{color:var(--accent)}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
 .side{width:52px;height:52px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:20px}
@@ -107,7 +113,43 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 <section id="s-settings" class="screen">
   <header><h1>Settings</h1><button class="iconbtn" id="setClose" aria-label="Close">✕</button></header>
   <div class="scroll">
-    <p class="note" style="margin-top:0">Keys are stored only on this phone (in the browser), never in the app's code.</p>
+    <p class="note" style="margin-top:0">Keys are stored only on this phone (in the browser), never in the app's code. They stay saved through app updates. Only deleting the home-screen icon or clearing Safari website data erases them.</p>
+    <div class="guide">
+      <details>
+        <summary>📘 How to get your Azure Speech key (free)</summary>
+        <ol>
+          <li>Go to <b>azure.microsoft.com/free</b> and sign in with any Microsoft account. It asks for a phone number and a card. The card is only for identity, and the free tier never charges.</li>
+          <li>Go to <b>portal.azure.com</b>, search <b>Speech</b> in the top bar, choose <b>Speech services</b>, then tap <b>+ Create</b>.</li>
+          <li>Fill in: Resource group → <i>Create new</i> "hablemos". Region → <b>East US</b>. Name → anything unique. Pricing tier → <b>Free F0</b>. The other tier costs money.</li>
+          <li>Tap <b>Review + create → Create</b>, wait about a minute, then tap <b>Go to resource → Keys and Endpoint</b>.</li>
+          <li>Copy <b>KEY 1</b> into the box below. For region, enter what "Location/Region" shows (usually <code>eastus</code>).</li>
+        </ol>
+        <p class="tip">⚠️ <b>Can't copy the key on iPhone?</b> The portal hides it and the copy icon often fails on mobile. Try these in order:<br>
+        1) Tap <b>Show Keys</b>, then long-press the key → Select All → Copy.<br>
+        2) In Safari, tap <b>aA → Request Desktop Website</b> and try the copy icon again.<br>
+        3) Screenshot the shown key, open it in Photos, long-press the text (Live Text) → Copy. Double-check 0/O and 1/l, then delete the screenshot.<br>
+        4) Copy it on your computer, paste it into Apple Notes or email it to yourself, copy it on your phone, then delete the note.</p>
+        <p class="tip">💡 If <b>Free F0</b> isn't offered, you already have a free Speech resource (one per account). Use that one's key.</p>
+      </details>
+      <details>
+        <summary>📗 How to get your Claude API key</summary>
+        <ol>
+          <li>Go to <b>platform.claude.com</b> and sign in. The same email as your Claude account works, but API billing is separate from a Claude subscription.</li>
+          <li><b>Settings → Billing</b>: buy prepaid credit. $5 is plenty to start, and a 15-min session costs a few cents. On a Max plan you can claim free monthly API credits at claude.ai → Settings → Billing → API credits.</li>
+          <li><b>Settings → Limits</b>: set a low monthly spend limit (e.g. $10) so a lost phone can never cost more.</li>
+          <li><b>Settings → API keys → Create key</b>, name it "hablemos", and <b>copy it immediately</b>. It starts with <code>sk-ant-</code> and is only shown once. If you lose it, just make a new one.</li>
+        </ol>
+        <p class="tip">💡 On iPhone, if the copy button doesn't work, use <b>aA → Request Desktop Website</b>.</p>
+      </details>
+      <details>
+        <summary>📱 Install on your home screen</summary>
+        <ol>
+          <li>Open this page in <b>Safari</b>. Other browsers can't install it on iPhone.</li>
+          <li>Tap <b>Share → Add to Home Screen</b>, then open the app from the new icon.</li>
+          <li>When asked for <b>microphone</b> access, tap Allow. If you denied it earlier, go to iPhone Settings → Safari → Microphone.</li>
+        </ol>
+      </details>
+    </div>
     <label>Azure Speech key</label><input id="azKey" type="password" autocomplete="off" placeholder="32-character key">
     <label>Azure Speech region</label><input id="azRegion" placeholder="eastus" autocapitalize="off">
     <label>Claude API key</label><input id="clKey" type="password" autocomplete="off" placeholder="sk-ant-...">
