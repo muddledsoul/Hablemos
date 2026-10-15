@@ -16,10 +16,22 @@ and native-voice replies.
 Keys live only in the phone's browser storage, never in the code/repo.
 
 ## Using it
-- Pick a scenario (or Custom), level, tutor accent/voice/speed -> Start.
-- Tap mic, speak, tap again. Words are underlined green / yellow / red; tap one to hear it.
+- Pick a scenario (or Custom), level, tutor accent/voice/speed -> Start. Or tap **Start today's session** to run the next item in your training plan.
+- Tap mic, speak, tap again to send. **✕ Clear & redo** throws away a bad recording while you're still talking.
+- Words are underlined green / yellow / red; tap one to hear it.
 - Feedback card: scores, corrected sentence, "more natural" version, pronunciation tips (each with play).
-- 💡 = suggested next line. ⌨︎ = type instead. **Review** = end-of-session summary + phrases to keep.
+- ❓ = ask anything in English (typed or spoken): meanings, "how do I say...", grammar. Then **Practice saying it** for a scored attempt. **❓ Explain** on any tutor line breaks it down.
+- 💡 = suggested next line. ⌨︎ = type instead. **Review** = end-of-session summary + phrases to keep (runs automatically when you leave).
+
+## Progress & training (📈 on the home screen)
+- Every session's scores, % correct sentences and minutes are saved after each turn.
+- Reviews track **weak spots**. The tutor steers future conversations so you practice them. Two good sessions in a row moves a spot to Mastered.
+- **Tricky words** you often mispronounce get worked into the tutor's lines.
+- **Training plan**: 5 targeted sessions built from your history. Rebuild it when you finish.
+- **Level-up targets** (last 5 sessions at your level):
+  - Beginner -> Intermediate: 8 sessions, pronunciation 75+, 55%+ correct, 3 or fewer open weak spots
+  - Intermediate -> Advanced: 12 sessions, pronunciation 82+, 65%+ correct, 3 or fewer open weak spots
+- Progress lives on the phone only. Use **Export** / **Import** on the Progress page to back it up.
 
 ## Note on accents
 Azure's pronunciation grader supports es-MX (and es-ES) only, so your speech is always graded
