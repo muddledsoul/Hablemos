@@ -85,6 +85,29 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 .guide li{margin-bottom:6px}
 .guide .tip{font-size:13.5px;color:#c9d6de;background:var(--panel2);border-radius:10px;padding:10px;margin:0 0 12px}
 .guide code{color:var(--accent)}
+/* progress */
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.sec h3{margin:0 0 8px;font-size:16px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tile .v{font-size:26px;font-weight:700}.tile .k{font-size:12.5px;color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin:6px 0 10px}
+.meter>i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.checks{list-style:none;padding:0;margin:0;font-size:14.5px}
+.checks li{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)}
+.checks li:last-child{border:0}.checks .s{flex:1}.checks .h{color:var(--muted)}
+.plan{list-style:none;padding:0;margin:0}
+.plan li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.plan li:last-child{border:0}.plan .tx{flex:1;font-size:14.5px}.plan .done{opacity:.5}
+.plan button{flex:none;padding:6px 12px;border-radius:8px;background:var(--accent);color:#04241c;font-weight:700;font-size:13.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.hist{font-size:14px;padding:8px 0;border-bottom:1px solid var(--line)}.hist:last-child{border:0}
+.today{background:linear-gradient(135deg,#173a33,#162027);border:1px solid var(--accent2);border-radius:14px;padding:14px;margin-bottom:6px}
+.today .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.today .g{font-size:16px;font-weight:600;margin:4px 0 10px}
+.banner{background:#2a2410;border:1px solid var(--ok);border-radius:12px;padding:12px;margin-bottom:12px;font-size:14.5px}
+.goal{align-self:stretch;background:#173a33;border:1px solid var(--accent2);border-radius:12px;padding:10px 12px;font-size:14px}
+svg.trend text{fill:var(--muted);font-size:10px}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
 .side{width:52px;height:52px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:20px}
@@ -174,9 +197,10 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 
 <!-- HOME -->
 <section id="s-home" class="screen">
-  <header><h1>¡Hablemos!</h1><button class="iconbtn" id="openSettings" aria-label="Settings">⚙︎</button></header>
+  <header><h1>¡Hablemos!</h1><button class="iconbtn" id="openProgress" aria-label="Progress">📈</button><button class="iconbtn" id="openSettings" aria-label="Settings">⚙︎</button></header>
   <div class="scroll">
-    <label style="margin-top:0">Scenario</label>
+    <div id="todayCard"></div>
+    <label>Or pick any scenario</label>
     <div class="grid" id="scenarios"></div>
     <div id="customWrap" style="display:none">
       <label>Describe the situation</label>
@@ -196,6 +220,12 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
     <button class="btn" id="startBtn">Start conversation</button>
     <p class="note" style="text-align:center">Tap the mic, speak, tap again to send. Underlined words show pronunciation: green good · yellow close · red needs work. Tap any word to hear it.</p>
   </div>
+</section>
+
+<!-- PROGRESS -->
+<section id="s-progress" class="screen">
+  <header><button class="iconbtn" id="progBack" aria-label="Back">‹</button><h1>My progress</h1></header>
+  <div class="scroll" id="progBody"></div>
 </section>
 
 <!-- CHAT -->
@@ -364,7 +394,79 @@ Rules:
 - "correction" is null only if the learner's sentence was correct AND natural. Ignore missing punctuation, capitalization, and accents in transcripts (those come from the recognizer).
 - "pronunciation": only words scored below 75, at most 3, most important first. Empty array for typed turns or if all words scored 75+.
 - Notes and tips in English; reply, corrected, natural, hint in Spanish.
-- If the learner writes or speaks in English, help them say it in Spanish via "correction" and continue in character.`;
+- If the learner writes or speaks in English, help them say it in Spanish via "correction" and continue in character.${profileForPrompt()}`;
+}
+
+/* ---------- progress store ---------- */
+const PKEY="hablemos.progress.v1";
+const PBLANK=()=>({sessions:[],focus:[],mastered:[],phrases:[],trouble:{},plan:null,levelNote:null});
+let P=loadP();
+function loadP(){ try{ return Object.assign(PBLANK(), JSON.parse(localStorage.getItem(PKEY)||"{}")); }catch(e){ return PBLANK(); } }
+function saveP(){ try{ localStorage.setItem(PKEY, JSON.stringify(P)); }catch(e){ toast("Couldn't save progress"); } }
+const dayKey=(t=Date.now())=>new Date(t).toLocaleDateString("en-CA");
+const mean=a=>{ const v=a.filter(x=>x!=null&&!isNaN(x)); return v.length?Math.round(v.reduce((x,y)=>x+y,0)/v.length):null; };
+
+function topTrouble(n){
+  return Object.entries(P.trouble).filter(([w,v])=>v.n>=2)
+    .sort((a,b)=>(b[1].n*(100-b[1].sum/b[1].n))-(a[1].n*(100-a[1].sum/a[1].n))).slice(0,n).map(([w])=>w);
+}
+function profileForPrompt(){
+  let s="";
+  const f=P.focus.map(x=>x.t);
+  if(f.length) s+=`\n- Weak spots from past sessions: ${f.join("; ")}. Steer the conversation naturally so the learner has to use these (ask questions that require that tense or structure, bring up words with those sounds). Don't announce that you're doing it.`;
+  const tw=topTrouble(6);
+  if(tw.length) s+=`\n- Words they often mispronounce: ${tw.join(", ")}. Work a few into your lines so they hear them and have reason to say them.`;
+  const ph=P.phrases.slice(-8).map(p=>p.es);
+  if(ph.length) s+=`\n- Phrases they recently learned: ${ph.join(" | ")}. Create chances to reuse them.`;
+  if(session&&session.goal) s+=`\n- TODAY'S TRAINING GOAL: ${session.goal}. Shape the conversation around it.`;
+  return s?`\n\nLEARNER PROFILE (use it, keep it invisible):${s}`:"";
+}
+
+// Save the session's running stats after every turn, so nothing is lost if the app is closed.
+function saveSessionStats(){
+  if(!session||!session.log.length) return;
+  const L=session.log;
+  const rec={id:session.id, date:new Date(session.started).toISOString(), day:dayKey(session.started),
+    scenario:session.scenario.t, scenarioId:session.scenario.id, level:session.level, country:S.country,
+    turns:L.length, avgPron:mean(L.map(l=>l.pron)), avgFlu:mean(L.map(l=>l.flu)),
+    correctPct:Math.round(100*L.filter(l=>l.ok).length/L.length),
+    minutes:Math.max(1,Math.round((Date.now()-session.started)/60000)),
+    goal:session.goal||null, planIdx:session.planIdx??null};
+  const i=P.sessions.findIndex(s=>s.id===rec.id);
+  if(i>=0) P.sessions[i]=Object.assign(P.sessions[i],rec); else P.sessions.push(rec);
+  saveP();
+}
+function trackWords(words){
+  for(const w of words||[]){
+    const k=w.w.toLowerCase(); if(k.length<3) continue;
+    const t=P.trouble[k]||{n:0,sum:0,seen:0};
+    t.seen++; if(w.s<70){ t.n++; t.sum+=w.s; }
+    else if(t.n>0 && w.s>=85){ t.n=Math.max(0,t.n-1); } // said it well: decay
+    if(t.n===0&&t.seen>20) delete P.trouble[k]; else P.trouble[k]=t;
+  }
+}
+
+/* ---------- levels ---------- */
+// Level-up thresholds. Measured over the last 5 sessions (3+ turns each) at the current level.
+const LEVEL_RULES={
+  beginner:{next:"intermediate",sessions:8,pron:75,correct:55,focus:3},
+  intermediate:{next:"advanced",sessions:12,pron:82,correct:65,focus:3},
+  advanced:null
+};
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function readiness(level=S.level){
+  const r=LEVEL_RULES[level]; if(!r) return null;
+  const at=P.sessions.filter(s=>s.level===level&&s.turns>=3);
+  const last=at.slice(-5);
+  const pron=mean(last.map(s=>s.avgPron)), corr=mean(last.map(s=>s.correctPct));
+  const checks=[
+    {label:`${r.sessions} sessions at ${level} level`, have:`${at.length}/${r.sessions}`, ok:at.length>=r.sessions},
+    {label:`Pronunciation avg ${r.pron}+ (last 5)`, have:pron??"–", ok:pron!=null&&pron>=r.pron&&last.length>=3},
+    {label:`Correct sentences ${r.correct}%+ (last 5)`, have:corr!=null?corr+"%":"–", ok:corr!=null&&corr>=r.correct&&last.length>=3},
+    {label:`${r.focus} or fewer open weak spots`, have:P.focus.length, ok:P.focus.length<=r.focus&&at.length>=3}
+  ];
+  const n=checks.filter(c=>c.ok).length;
+  return {next:r.next, checks, ready:n===checks.length, pct:Math.round(100*n/checks.length)};
 }
 
 /* ---------- speech recognition + pronunciation assessment ---------- */
@@ -481,19 +583,23 @@ function setBusy(b, label){
   else if(t) t.remove();
 }
 
-async function startSession(){
+// opts (from the training plan): {scenarioId, custom, goal, planIdx}
+async function startSession(opts={}){
   if(needKeys()){ toast("Add your keys first"); openSettings(); return; }
   unlockAudio();
-  let sc=SCENARIOS.find(s=>s.id===S.scenario)||SCENARIOS[0];
+  const sid=opts.scenarioId||S.scenario;
+  let sc=SCENARIOS.find(s=>s.id===sid)||SCENARIOS[0];
   if(sc.id==="custom"){
-    const txt=$("#customText").value.trim();
+    const txt=(opts.custom||$("#customText").value).trim();
     if(!txt){ toast("Describe your custom situation"); return; }
-    S.custom=txt; save();
-    sc={...sc, role:`a natural participant in this situation described by the learner: "${txt}". Choose the most fitting role for yourself`};
+    if(!opts.custom){ S.custom=txt; save(); }
+    sc={...sc, t:opts.custom?"Custom":sc.t, role:`a natural participant in this situation described by the learner: "${txt}". Choose the most fitting role for yourself`};
   }
-  session={scenario:sc, messages:[], log:[], lastHint:"", transcript:[]};
+  session={id:Date.now(), started:Date.now(), level:S.level, scenario:sc, messages:[], log:[], lastHint:"", transcript:[],
+           goal:opts.goal||null, planIdx:opts.planIdx??null, reviewedAt:0};
   $("#chat").innerHTML=""; $("#live").textContent="";
   $("#chatTitle").textContent=sc.ic+" "+sc.t;
+  if(session.goal){ const g=document.createElement("div"); g.className="goal"; g.textContent="🎯 Today's goal: "+session.goal; $("#chat").appendChild(g); }
   show("s-chat");
   await turn({kind:"start"});
 }
@@ -513,7 +619,12 @@ async function turn(t){
     const d=parseJSON(raw);
     session.messages.push({role:"assistant",content:raw});
     setBusy(false);
-    if(t.kind!=="start"){ addFeedback(t,d); session.log.push({said:t.text, pron:t.pron, low:(t.words||[]).filter(w=>w.s<70).map(w=>w.w), correction:d.correction}); }
+    if(t.kind!=="start"){
+      addFeedback(t,d);
+      session.log.push({said:t.text, pron:t.pron, flu:t.flu, ok:!(d.correction&&d.correction.corrected),
+        low:(t.words||[]).filter(w=>w.s<70).map(w=>w.w), correction:d.correction});
+      trackWords(t.words); saveSessionStats();
+    }
     session.lastHint=d.hint||"";
     addTutor(d);
   }catch(e){
@@ -556,17 +667,34 @@ async function review(){
   if(!session||!session.log.length){ toast("Say a few things first"); return; }
   if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#clearBtn").classList.remove("on"); await stopRec(true); }
   openSheet(`<h2>Session review</h2><p class="note">Putting it together…</p>`);
-  const pr=session.log.filter(l=>l.pron!=null).map(l=>l.pron);
-  const avg=pr.length?Math.round(pr.reduce((a,b)=>a+b,0)/pr.length):null;
-  const lines=session.log.map((l,i)=>`${i+1}. "${l.said}"${l.pron!=null?" (pron "+l.pron+")":""}${l.low.length?" low-scoring words: "+l.low.join(", "):""}${l.correction?" -> corrected: "+l.correction.corrected:""}`).join("\n");
+  saveSessionStats();
+  const avg=mean(session.log.map(l=>l.pron));
+  const corr=Math.round(100*session.log.filter(l=>l.ok).length/session.log.length);
+  const lines=session.log.map((l,i)=>`${i+1}. "${l.said}"${l.pron!=null?" (pron "+l.pron+")":""}${l.low.length?" low-scoring words: "+l.low.join(", "):""}${l.correction?" -> corrected: "+l.correction.corrected+" | notes: "+(l.correction.notes||[]).join("; "):" (correct)"}`).join("\n");
+  const prior=P.focus.map(f=>f.t);
   try{
     const raw=await claude(
-      `You are a Spanish tutor reviewing a learner's speaking practice session (${VOICES[S.country].name} Spanish, level ${S.level}, scenario: ${session.scenario.t}). Respond ONLY with JSON: {"summary":"2-3 encouraging but honest sentences in English","strengths":["..."],"focus":["the 2-3 most important things to work on, specific (grammar patterns or sounds)"],"phrases":[{"es":"useful phrase for this scenario","en":"translation"}]} with 3-5 phrases.`,
-      [{role:"user",content:"Learner turns:\n"+lines}], 900);
+      `You are a Spanish tutor reviewing a learner's speaking practice session (${VOICES[S.country].name} Spanish, level ${session.level}, scenario: ${session.scenario.t}${session.goal?", today's goal: "+session.goal:""}).
+The learner's OPEN WEAK SPOTS from earlier sessions are: ${prior.length?prior.map(p=>`"${p}"`).join(", "):"(none yet)"}.
+Respond ONLY with JSON:
+{"summary":"2-3 encouraging but honest sentences in English${session.goal?", including whether they hit today's goal":""}",
+ "strengths":["..."],
+ "focus":["the 2-3 most important things to work on from THIS session, specific"],
+ "phrases":[{"es":"useful phrase for this scenario","en":"translation"}],
+ "weak_spots":{"still":["open weak spots (exact text) that showed up again as a problem"],
+               "improved":["open weak spots (exact text) the learner used correctly this session"],
+               "new":["new recurring problems worth tracking, as short labels like 'ser vs estar' or 'single r tap (pero, para)'; skip one-off slips"]},
+ "level_note":"one honest sentence on how close they are to the next level and what's holding them back"}
+Give 3-5 phrases. Only put an item under improved/still if this session actually gave evidence.`,
+      [{role:"user",content:"Learner turns:\n"+lines}], 1200);
     const d=parseJSON(raw);
+    applyReview(d);
+    const rd=readiness(session.level);
     openSheet(`<h2>Session review</h2>
-      ${avg!=null?`<div class="scores" style="display:flex;gap:6px;margin:8px 0"><span class="pill ${cls(avg)}">Avg pronunciation ${avg}</span><span class="pill">${session.log.length} turns</span></div>`:""}
+      <div class="scores" style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">${avg!=null?`<span class="pill ${cls(avg)}">Avg pronunciation ${avg}</span>`:""}<span class="pill ${cls(corr)}">${corr}% correct</span><span class="pill">${session.log.length} turns</span><span class="pill g">✓ Saved</span></div>
       <p>${esc(d.summary)}</p>
+      ${rd&&rd.ready?`<div class="banner">🎉 You've met every target for <b>${cap(rd.next)}</b>. Switch levels on the Progress page.</div>`:""}
+      ${d.weak_spots&&(d.weak_spots.improved||[]).length?`<div class="ok" style="margin-bottom:6px">⬆︎ Improving: ${esc(d.weak_spots.improved.join(", "))}</div>`:""}
       <div class="fb" style="margin-top:8px">
         <div class="lbl" style="margin-top:0">Doing well</div><ul>${(d.strengths||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
         <div class="lbl">Work on</div><ul>${(d.focus||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
@@ -576,9 +704,38 @@ async function review(){
       <div style="height:14px"></div>
       <div class="row"><button class="btn ghost" id="keepGoing">Keep talking</button><button class="btn" id="newConvo">New scenario</button></div>`);
     $("#keepGoing").onclick=closeSheet;
-    $("#newConvo").onclick=()=>{ closeSheet(); show("s-home"); };
-  }catch(e){ openSheet(`<h2>Session review</h2><p class="err">${esc(e.message)}</p><button class="btn ghost" onclick="closeSheet()">Close</button>`); }
+    $("#newConvo").onclick=()=>{ closeSheet(); goHome(); };
+  }catch(e){ openSheet(`<h2>Session review</h2><p class="note">Your scores were saved, but the written review failed:</p><p class="err">${esc(e.message)}</p><div class="row"><button class="btn ghost" onclick="closeSheet()">Close</button><button class="btn" onclick="closeSheet();goHome()">Home</button></div>`); }
 }
+
+// Fold a review into the long-term learner profile.
+function applyReview(d){
+  const now=Date.now(), norm=s=>String(s).trim().toLowerCase();
+  const ws=d.weak_spots||{}, still=(ws.still||[]).map(norm), imp=(ws.improved||[]).map(norm);
+  for(const f of P.focus){
+    const k=norm(f.t);
+    if(imp.includes(k)){ f.good=(f.good||0)+1; f.last=now; }
+    else if(still.includes(k)){ f.seen=(f.seen||1)+1; f.good=0; f.last=now; }
+  }
+  // Two sessions in a row using it correctly = mastered.
+  const done=P.focus.filter(f=>(f.good||0)>=2);
+  for(const f of done) P.mastered.push({t:f.t, at:now});
+  P.focus=P.focus.filter(f=>(f.good||0)<2);
+  for(const n of ws.new||[]){
+    if(!n||P.focus.some(f=>norm(f.t)===norm(n))) continue;
+    P.focus.push({t:n, added:now, last:now, seen:1, good:0});
+  }
+  P.focus.sort((a,b)=>(b.last||0)-(a.last||0)); P.focus=P.focus.slice(0,6);
+  for(const p of d.phrases||[]){ if(p.es&&!P.phrases.some(x=>norm(x.es)===norm(p.es))) P.phrases.push({es:p.es,en:p.en,at:now}); }
+  P.phrases=P.phrases.slice(-80);
+  if(d.level_note) P.levelNote={t:d.level_note, at:now, level:session.level};
+  const rec=P.sessions.find(s=>s.id===session.id);
+  if(rec) Object.assign(rec,{summary:d.summary, focus:d.focus||[], reviewed:true});
+  if(session.planIdx!=null&&P.plan&&P.plan.sessions[session.planIdx]) P.plan.sessions[session.planIdx].done=true;
+  session.reviewedAt=session.log.length;
+  saveP();
+}
+function goHome(){ renderToday(); show("s-home"); }
 function openSheet(html){ $("#sheetIn").innerHTML=html; $("#sheet").classList.add("on"); }
 function closeSheet(){
   $("#sheet").classList.remove("on");
@@ -720,9 +877,173 @@ $("#hintBtn").onclick=()=>{
 };
 $("#endBtn").onclick=review;
 $("#askBtn").onclick=()=>{ if(busy){ toast("Wait for the tutor to finish"); return; } openAsk(""); };
-$("#backBtn").onclick=async()=>{ if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#clearBtn").classList.remove("on"); await stopRec(true); } show("s-home"); };
+$("#backBtn").onclick=async()=>{
+  if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#clearBtn").classList.remove("on"); await stopRec(true); }
+  // Leaving with unreviewed turns: run the review so the session counts toward progress.
+  if(session&&session.log.length>=2&&session.reviewedAt<session.log.length){ review(); return; }
+  goHome();
+};
+
+/* ---------- today card (home) ---------- */
+function nextPlanItem(){
+  if(!P.plan) return null;
+  const i=P.plan.sessions.findIndex(s=>!s.done);
+  return i<0?null:{i, item:P.plan.sessions[i]};
+}
+function renderToday(){
+  const el=$("#todayCard"); let h="";
+  const rd=readiness();
+  if(rd&&rd.ready) h+=`<div class="banner">🎉 You've hit every target for <b>${cap(rd.next)}</b>. <a href="#" id="goProg" style="color:var(--ok)">See progress →</a></div>`;
+  const n=nextPlanItem();
+  if(n){
+    const sc=SCENARIOS.find(s=>s.id===n.item.scenario)||SCENARIOS[SCENARIOS.length-1];
+    const total=P.plan.sessions.length, done=P.plan.sessions.filter(s=>s.done).length;
+    h+=`<div class="today"><div class="k">Today's training · ${done+1} of ${total}</div>
+      <div class="g">${sc.ic} ${esc(n.item.scenario==="custom"?(n.item.custom||"Custom"):sc.t)}<br><span style="font-weight:400;font-size:14.5px;color:#c9d6de">🎯 ${esc(n.item.goal)}</span></div>
+      <button class="btn" id="startToday">Start today's session</button></div>`;
+  } else {
+    h+=`<div class="today"><div class="k">Training plan</div>
+      <div class="g">${P.plan?"Plan complete. Build your next one.":"Get a plan built around your weak spots."}</div>
+      <button class="btn" id="buildPlanHome">${P.plan?"Build next plan":"Build my training plan"}</button></div>`;
+  }
+  el.innerHTML=h;
+  const st=$("#startToday"); if(st) st.onclick=()=>startPlanItem(n.i);
+  const bp=$("#buildPlanHome"); if(bp) bp.onclick=()=>{ openProgress(); buildPlan(); };
+  const gp=$("#goProg"); if(gp) gp.onclick=e=>{ e.preventDefault(); openProgress(); };
+}
+function startPlanItem(i){
+  const it=P.plan.sessions[i];
+  startSession({scenarioId:it.scenario, custom:it.scenario==="custom"?it.custom:null, goal:it.goal, planIdx:i});
+}
+
+/* ---------- progress screen ---------- */
+function streak(){
+  const days=new Set(P.sessions.map(s=>s.day)); let n=0; let t=Date.now();
+  if(!days.has(dayKey(t))) t-=864e5;
+  while(days.has(dayKey(t))){ n++; t-=864e5; }
+  return n;
+}
+function trendSVG(){
+  const pts=P.sessions.filter(s=>s.avgPron!=null).slice(-30);
+  if(pts.length<2) return `<p class="note">Your pronunciation trend appears after 2 spoken sessions.</p>`;
+  const W=320,H=130,L=26,R=8,T=8,B=18;
+  const lo=Math.max(0,Math.min(50,...pts.map(p=>p.avgPron))-5), hi=100;
+  const x=i=>L+(W-L-R)*(pts.length===1?0.5:i/(pts.length-1));
+  const y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const grid=[60,80,100].filter(v=>v>=lo).map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end">${v}</text>`).join("");
+  const path=pts.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p.avgPron).toFixed(1)}`).join("");
+  const dots=pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.avgPron)}" r="4" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/>`).join("");
+  const hits=pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.avgPron)}" r="13" fill="transparent" data-tip="${esc(new Date(p.date).toLocaleDateString()+" · "+p.scenario+" · pronunciation "+p.avgPron+" · "+p.correctPct+"% correct")}"/>`).join("");
+  return `<svg class="trend" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Pronunciation score per session">${grid}<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}${hits}<text x="${L}" y="${H-4}">first</text><text x="${W-R}" y="${H-4}" text-anchor="end">latest</text></svg>
+    <p class="note" style="margin-top:2px">Tap a point for details.</p>`;
+}
+function openProgress(){ renderProgress(); show("s-progress"); }
+function renderProgress(){
+  const S5=P.sessions.slice(-5), mins=P.sessions.reduce((a,s)=>a+(s.minutes||0),0);
+  const rd=readiness();
+  let h=`<div class="tiles">
+    <div class="tile"><div class="v">${P.sessions.length}</div><div class="k">sessions</div></div>
+    <div class="tile"><div class="v">${streak()}🔥</div><div class="k">day streak</div></div>
+    <div class="tile"><div class="v">${mean(S5.map(s=>s.avgPron))??"–"}</div><div class="k">pronunciation (last 5)</div></div>
+    <div class="tile"><div class="v">${mins<60?mins+"m":(mins/60).toFixed(1)+"h"}</div><div class="k">time speaking Spanish</div></div>
+  </div>`;
+  h+=`<div class="sec"><h3>Pronunciation per session</h3>${trendSVG()}</div>`;
+  // level
+  h+=`<div class="sec"><h3>Level: ${cap(S.level)}</h3>`;
+  if(rd){
+    h+=`<div class="note" style="margin-top:0">Ready for ${cap(rd.next)}: ${rd.pct}%</div><div class="meter"><i style="width:${rd.pct}%"></i></div>
+      <ul class="checks">${rd.checks.map(c=>`<li><span>${c.ok?"✅":"⬜️"}</span><span class="s">${esc(c.label)}</span><span class="h">${esc(c.have)}</span></li>`).join("")}</ul>`;
+    if(rd.ready) h+=`<div style="height:10px"></div><button class="btn" id="levelUp">Move up to ${cap(rd.next)} →</button>`;
+  } else h+=`<p class="note" style="margin-top:0">You're at the top level. Keep the streak going and push into topics you'd find hard in English too.</p>`;
+  if(P.levelNote&&P.levelNote.level===S.level) h+=`<p class="note">Tutor's take: ${esc(P.levelNote.t)}</p>`;
+  if(S.level!=="beginner") h+=`<p class="note">Struggling? It's fine to drop a level for a few sessions. Change it on the home screen.</p>`;
+  h+=`</div>`;
+  // plan
+  h+=`<div class="sec"><h3>Training plan</h3>`;
+  if(P.plan){
+    const p=P.plan;
+    h+=`<p style="margin:0 0 6px;font-weight:600">${esc(p.headline)}</p><p class="note" style="margin-top:0">${esc(p.daily||"")}</p><ul class="plan">${p.sessions.map((s,i)=>{
+      const sc=SCENARIOS.find(x=>x.id===s.scenario)||SCENARIOS[SCENARIOS.length-1];
+      return `<li class="${s.done?"done":""}"><span>${s.done?"✅":sc.ic}</span><div class="tx"><b>${esc(s.scenario==="custom"?(s.custom||"Custom"):sc.t)}</b><br>🎯 ${esc(s.goal)}${s.why?`<div class="note" style="margin:2px 0 0">${esc(s.why)}</div>`:""}</div>${s.done?"":`<button data-plan="${i}">Start</button>`}</li>`;}).join("")}</ul>`;
+    if(p.drills&&p.drills.length) h+=`<div class="lbl" style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:10px">Between sessions</div><ul style="margin:6px 0 0;padding-left:18px;font-size:14.5px;color:#c9d6de">${p.drills.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+    if(p.milestone) h+=`<p class="note">🏁 ${esc(p.milestone)}</p>`;
+    h+=`<div style="height:10px"></div><button class="btn ghost" id="buildPlan">Rebuild plan</button>`;
+  } else h+=`<p class="note" style="margin-top:0">Your tutor will build a 5-session plan around your weak spots, then rebuild it as you improve.</p><button class="btn" id="buildPlan">Build my training plan</button>`;
+  h+=`<div id="planStatus" class="note"></div></div>`;
+  // weak spots
+  h+=`<div class="sec"><h3>Working on</h3>${P.focus.length?`<ul class="checks">${P.focus.map(f=>`<li><span>🎯</span><span class="s">${esc(f.t)}</span><span class="h">${f.good?"⬆︎ improving":"seen "+(f.seen||1)+"×"}</span></li>`).join("")}</ul>`:`<p class="note" style="margin-top:0">Finish a session with Review and your weak spots will show up here. Your tutor works them into future conversations.</p>`}
+    ${P.mastered.length?`<details style="margin-top:8px"><summary class="note">✅ Mastered (${P.mastered.length})</summary><ul class="checks">${P.mastered.slice().reverse().map(m=>`<li><span>✅</span><span class="s">${esc(m.t)}</span><span class="h">${new Date(m.at).toLocaleDateString()}</span></li>`).join("")}</ul></details>`:""}</div>`;
+  const tw=topTrouble(12);
+  if(tw.length) h+=`<div class="sec"><h3>Tricky words</h3><div class="chips">${tw.map(w=>`<button class="chip" data-say="${esc(w)}" data-rate="-30%">▶︎ ${esc(w)}</button>`).join("")}</div><p class="note">They drop off as you say them well.</p></div>`;
+  if(P.phrases.length) h+=`<div class="sec"><details><summary style="font-weight:700">Phrase bank (${P.phrases.length})</summary>${P.phrases.slice().reverse().map(p=>`<div class="line" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><div class="tx" style="flex:1">${esc(p.es)}<div class="note" style="margin:0">${esc(p.en)}</div></div><button class="play" data-say="${esc(p.es)}">▶︎</button></div>`).join("")}</details></div>`;
+  if(P.sessions.length) h+=`<div class="sec"><details><summary style="font-weight:700">Session history</summary>${P.sessions.slice().reverse().map(s=>`<div class="hist"><b>${new Date(s.date).toLocaleDateString()}</b> · ${esc(s.scenario)} · ${cap(s.level)}<br><span class="note">${s.turns} turns · pron ${s.avgPron??"–"} · ${s.correctPct}% correct · ${s.minutes}m</span>${s.summary?`<div class="note" style="margin-top:4px">${esc(s.summary)}</div>`:""}</div>`).join("")}</details></div>`;
+  h+=`<div class="sec"><h3>Backup</h3><p class="note" style="margin-top:0">Progress is saved on this phone. Deleting the home-screen icon erases it, so export a backup now and then.</p>
+    <div class="row"><button class="btn ghost" id="exportP">Export</button><button class="btn ghost" id="importP">Import</button></div><input type="file" id="importFile" accept="application/json,.json" style="display:none"></div>`;
+  $("#progBody").innerHTML=h;
+  const lu=$("#levelUp"); if(lu) lu.onclick=()=>{ S.level=rd.next; save(); document.querySelectorAll("#levelSeg button").forEach(b=>b.classList.toggle("sel",b.dataset.v===S.level)); toast("Level: "+cap(S.level)+". Building a new plan…"); renderProgress(); buildPlan(); };
+  $("#buildPlan").onclick=buildPlan;
+  $("#exportP").onclick=exportP;
+  $("#importP").onclick=()=>$("#importFile").click();
+  $("#importFile").onchange=importP;
+}
+$("#progBody").addEventListener("click",e=>{
+  const p=e.target.closest("[data-plan]"); if(p){ startPlanItem(+p.dataset.plan); return; }
+  const t=e.target.closest("[data-tip]"); if(t){ toast(t.dataset.tip,3500); return; }
+  const s=e.target.closest("[data-say]"); if(s){ unlockAudio(); say(s.dataset.say, s.dataset.rate); }
+});
+$("#openProgress").onclick=openProgress;
+$("#progBack").onclick=goHome;
+
+async function buildPlan(){
+  if(needKeys()){ toast("Add your keys first"); return; }
+  const st=$("#planStatus"); if(st) st.textContent="Building your plan…";
+  const rd=readiness();
+  const recent=P.sessions.slice(-6).map(s=>`${s.day} ${s.scenario} (${s.level}): ${s.turns} turns, pron ${s.avgPron??"n/a"}, ${s.correctPct}% correct${s.summary?". "+s.summary:""}`).join("\n")||"(no sessions yet)";
+  const ids=SCENARIOS.filter(s=>s.id!=="custom").map(s=>`${s.id} (${s.t})`).join(", ");
+  const ctx=`Level: ${S.level}. Dialect: ${VOICES[S.country].name}.
+Readiness for next level: ${rd?rd.checks.map(c=>`${c.label}: ${c.have}${c.ok?" ✓":""}`).join("; "):"top level"}.
+Open weak spots: ${P.focus.map(f=>f.t).join("; ")||"none recorded yet"}.
+Recently mastered: ${P.mastered.slice(-5).map(m=>m.t).join("; ")||"none"}.
+Often-mispronounced words: ${topTrouble(8).join(", ")||"none yet"}.
+Recent sessions:\n${recent}`;
+  try{
+    const d=parseJSON(await claude(
+`You are a Spanish speaking coach designing the learner's next block of practice in a conversation app. Each session is a 10-15 minute spoken roleplay with an AI tutor that corrects them.
+Available scenarios: ${ids}, or "custom" with your own situation.
+Design 5 sessions that (1) target the open weak spots and tricky words, (2) build toward the next level's targets, (3) vary situations so it stays interesting, and (4) get slightly harder through the block. If there's no history yet, start with a gentle mix and make session 1 a baseline.
+Respond ONLY with JSON:
+{"headline":"one-line focus for this block",
+ "daily":"recommended routine, e.g. 'One session a day, 10-15 min. Review at the end.'",
+ "sessions":[{"scenario":"scenario id or custom","custom":"situation text if custom, else omit","goal":"specific thing to practice, one short sentence","why":"which weak spot or target it serves"}],
+ "drills":["2-3 short habits outside the app, e.g. shadow a tutor line 5x, label things around the house"],
+ "milestone":"what finishing this block should get them, tied to the level targets"}`,
+      [{role:"user",content:ctx}], 1400));
+    if(!Array.isArray(d.sessions)||!d.sessions.length) throw new Error("Plan came back empty");
+    d.sessions=d.sessions.slice(0,7).map(s=>({...s, scenario:SCENARIOS.some(x=>x.id===s.scenario)?s.scenario:"custom", done:false}));
+    P.plan={...d, created:Date.now(), level:S.level}; saveP();
+    if($("#s-progress").classList.contains("on")) renderProgress();
+    renderToday(); toast("New training plan ready");
+  }catch(e){ const st2=$("#planStatus"); if(st2) st2.textContent="⚠︎ "+e.message; else toast(e.message,4000); }
+}
+
+function exportP(){
+  try{
+    const blob=new Blob([JSON.stringify({app:"hablemos",v:1,exported:new Date().toISOString(),progress:P},null,1)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`hablemos-progress-${dayKey()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){ toast("Export failed: "+e.message,4000); }
+}
+async function importP(e){
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const j=JSON.parse(await f.text()); const p=j.progress||j;
+    if(!Array.isArray(p.sessions)) throw new Error("Not a Hablemos backup");
+    P=Object.assign(PBLANK(),p); saveP(); renderProgress(); renderToday(); toast(`Restored ${P.sessions.length} sessions`);
+  }catch(err){ toast("Import failed: "+err.message,4000); }
+}
 
 /* ---------- boot ---------- */
+renderToday();
 if(needKeys()) openSettings(); else show("s-home");
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
