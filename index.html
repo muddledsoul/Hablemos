@@ -192,6 +192,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
     <div style="height:10px"></div>
     <button class="btn ghost" id="testKeys">Test keys</button>
     <p class="note" id="testOut"></p>
+    <p class="note" style="text-align:center;margin-top:18px">Hablemos version <b id="appVer"></b></p>
   </div>
 </section>
 
@@ -257,6 +258,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const RECOG_LOCALE = "es-MX";
+const APP_VERSION = "6 (progress + plans)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -1043,9 +1045,22 @@ async function importP(e){
 }
 
 /* ---------- boot ---------- */
+$("#appVer").textContent=APP_VERSION;
 renderToday();
 if(needKeys()) openSettings(); else show("s-home");
-if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+// Pick up new versions right away: check for an updated service worker on every launch
+// and when the app comes back to the foreground; reload once when a new one takes over.
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
+    reg.update().catch(()=>{});
+    document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") reg.update().catch(()=>{}); });
+  }).catch(()=>{});
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(reloaded||recording||askRecMode||(session&&$("#s-chat").classList.contains("on"))) return;
+    reloaded=true; location.reload();
+  });
+}
 </script>
 </body>
 </html>
