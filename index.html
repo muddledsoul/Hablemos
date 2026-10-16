@@ -66,6 +66,8 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 .fb .line .tx{flex:1;font-size:16px}
 .fb ul{margin:6px 0 0;padding-left:18px;color:#c9d6de}
 .fb .ok{color:var(--good)}
+.tw{cursor:pointer;border-radius:4px;-webkit-user-select:none;user-select:none}
+.tw.hit{background:rgba(47,208,168,.3)}
 .fb .tr{display:none;font-size:14px;color:var(--muted);margin-top:3px}
 .fb .line.showtr .tr{display:block}
 .play.entog{font-size:11px;font-weight:700}.play.entog.on{background:var(--accent);color:#04241c}
@@ -222,7 +224,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
     <div class="seg" id="speedSeg"><button data-v="0%">Normal</button><button data-v="-15%">Slower</button><button data-v="-30%">Slow</button></div>
     <div style="height:20px"></div>
     <button class="btn" id="startBtn">Start conversation</button>
-    <p class="note" style="text-align:center">Tap the mic, speak, tap again to send. Underlined words show pronunciation: green good · yellow close · red needs work. Tap any word to hear it.</p>
+    <p class="note" style="text-align:center">Tap the mic, speak, tap again to send. Underlined words show pronunciation: green good · yellow close · red needs work. Tap any Spanish word, yours or the tutor's, to hear it.</p>
   </div>
 </section>
 
@@ -261,7 +263,15 @@ svg.trend text{fill:var(--muted);font-size:10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const RECOG_LOCALE = "es-MX";
-const APP_VERSION = "9 (translations on corrections)";
+// Wrap each Spanish word in a tappable span; tapping one plays it slowly (see listener at boot).
+function tapWords(text){
+  return String(text??"").split(/(\s+)/).map(tok=>{
+    if(!tok.trim()) return tok;
+    const w=tok.replace(/^[¡¿"'“‘(«\[]+|[.,!?;:"'”’)»\]…]+$/g,"");
+    return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
+  }).join("");
+}
+const APP_VERSION = "10 (tap words to hear them)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -563,7 +573,7 @@ function cls(s){ return s>=80?"g":s>=60?"o":"b"; }
 
 function addTutor(d){
   const el=document.createElement("div"); el.className="msg tutor";
-  el.innerHTML=`<div class="es">${esc(d.reply)}</div><div class="en">${esc(d.reply_en)}</div>
+  el.innerHTML=`<div class="es">${tapWords(d.reply)}</div><div class="en">${esc(d.reply_en)}</div>
     <div class="tools"><button class="chip" data-a="play">▶︎ Play</button><button class="chip" data-a="slow">🐢 Slow</button><button class="chip" data-a="en">EN</button><button class="chip" data-a="ask">❓ Explain</button></div>`;
   el.addEventListener("click",e=>{
     const a=e.target.closest("[data-a]")?.dataset.a;
@@ -595,7 +605,7 @@ function addFeedback(turn, d){
   }
   const c=d.correction;
   if(c&&c.corrected){
-    const line=(es,en)=>`<div class="line"><div class="tx">${esc(es)}${en?`<div class="tr">${esc(en)}</div>`:""}</div>${en?`<button class="play entog" data-en="1">EN</button>`:""}<button class="play" data-say="${esc(es)}">▶︎</button></div>`;
+    const line=(es,en)=>`<div class="line"><div class="tx">${tapWords(es)}${en?`<div class="tr">${esc(en)}</div>`:""}</div>${en?`<button class="play entog" data-en="1">EN</button>`:""}<button class="play" data-say="${esc(es)}">▶︎</button></div>`;
     h+=`<div class="lbl">Corrected</div>`+line(c.corrected,c.corrected_en);
     if(c.natural&&c.natural.trim()!==c.corrected.trim())
       h+=`<div class="lbl">More natural</div>`+line(c.natural,c.natural_en);
@@ -734,7 +744,7 @@ Give 3-5 phrases. Only put an item under improved/still if this session actually
         <div class="lbl" style="margin-top:0">Doing well</div><ul>${(d.strengths||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
         <div class="lbl">Work on</div><ul>${(d.focus||[]).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
         <div class="lbl">Phrases to keep</div>
-        ${(d.phrases||[]).map(p=>`<div class="line"><div class="tx">${esc(p.es)}<div class="note" style="margin:0">${esc(p.en)}</div></div><button class="play" data-say="${esc(p.es)}">▶︎</button></div>`).join("")}
+        ${(d.phrases||[]).map(p=>`<div class="line"><div class="tx">${tapWords(p.es)}<div class="note" style="margin:0">${esc(p.en)}</div></div><button class="play" data-say="${esc(p.es)}">▶︎</button></div>`).join("")}
       </div>
       <div style="height:14px"></div>
       <div class="row"><button class="btn ghost" id="keepGoing">Keep talking</button><button class="btn" id="newConvo">New scenario</button></div>`);
@@ -834,11 +844,11 @@ function renderAsk(d){
   let h=`<div class="fb" style="margin-top:12px"><div>${esc(d.explanation)}</div>`;
   if(d.say){
     h+=`<div class="lbl">Say it</div>
-      <div class="line"><div class="tx"><div class="say">${esc(d.say)}</div>${d.phonetic?`<div class="phon">${esc(d.phonetic)}</div>`:""}<div class="note" style="margin:2px 0 0">${esc(d.say_en||"")}</div></div>
+      <div class="line"><div class="tx"><div class="say">${tapWords(d.say)}</div>${d.phonetic?`<div class="phon">${esc(d.phonetic)}</div>`:""}<div class="note" style="margin:2px 0 0">${esc(d.say_en||"")}</div></div>
       <button class="play" data-say="${esc(d.say)}">▶︎</button><button class="play" data-say="${esc(d.say)}" data-rate="-40%">🐢</button></div>`;
     if(d.breakdown&&d.breakdown.length) h+=`<div class="lbl">Breakdown</div><ul>${d.breakdown.map(b=>`<li><b>${esc(b.es)}</b>: ${esc(b.en)}</li>`).join("")}</ul>`;
     if(d.alternatives&&d.alternatives.length) h+=`<div class="lbl">Other ways</div>`+d.alternatives.map(a=>
-      `<div class="line"><div class="tx" style="font-size:15px">${esc(a.es)}<div class="note" style="margin:0">${esc(a.note)}</div></div><button class="play" data-say="${esc(a.es)}">▶︎</button></div>`).join("");
+      `<div class="line"><div class="tx" style="font-size:15px">${tapWords(a.es)}<div class="note" style="margin:0">${esc(a.note)}</div></div><button class="play" data-say="${esc(a.es)}">▶︎</button></div>`).join("");
     h+=`<div class="askrow"><button class="btn" id="practiceBtn">🎤 Practice saying it</button></div><div id="practiceLive" class="note"></div><div id="practiceOut"></div>`;
   }
   h+=`</div>`;
@@ -908,7 +918,7 @@ $("#typeSend").onclick=sendTyped;
 $("#typeIn").addEventListener("keydown",e=>{ if(e.key==="Enter") sendTyped(); });
 $("#hintBtn").onclick=()=>{
   if(!session||!session.lastHint){ toast("No hint yet"); return; }
-  openSheet(`<h2>💡 You could say…</h2><div class="fb"><div class="line"><div class="tx">${esc(session.lastHint)}</div><button class="play" data-say="${esc(session.lastHint)}">▶︎</button></div></div><div style="height:12px"></div><button class="btn ghost" onclick="closeSheet()">Got it</button>`);
+  openSheet(`<h2>💡 You could say…</h2><div class="fb"><div class="line"><div class="tx">${tapWords(session.lastHint)}</div><button class="play" data-say="${esc(session.lastHint)}">▶︎</button></div></div><div style="height:12px"></div><button class="btn ghost" onclick="closeSheet()">Got it</button>`);
 };
 $("#endBtn").onclick=review;
 $("#askBtn").onclick=()=>{ if(busy){ toast("Wait for the tutor to finish"); return; } openAsk(""); };
@@ -1010,7 +1020,7 @@ function renderProgress(){
     ${P.mastered.length?`<details style="margin-top:8px"><summary class="note">✅ Mastered (${P.mastered.length})</summary><ul class="checks">${P.mastered.slice().reverse().map(m=>`<li><span>✅</span><span class="s">${esc(m.t)}</span><span class="h">${new Date(m.at).toLocaleDateString()}</span></li>`).join("")}</ul></details>`:""}</div>`;
   const tw=topTrouble(12);
   if(tw.length) h+=`<div class="sec"><h3>Tricky words</h3><div class="chips">${tw.map(w=>`<button class="chip" data-say="${esc(w)}" data-rate="-30%">▶︎ ${esc(w)}</button>`).join("")}</div><p class="note">They drop off as you say them well.</p></div>`;
-  if(P.phrases.length) h+=`<div class="sec"><details><summary style="font-weight:700">Phrase bank (${P.phrases.length})</summary>${P.phrases.slice().reverse().map(p=>`<div class="line" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><div class="tx" style="flex:1">${esc(p.es)}<div class="note" style="margin:0">${esc(p.en)}</div></div><button class="play" data-say="${esc(p.es)}">▶︎</button></div>`).join("")}</details></div>`;
+  if(P.phrases.length) h+=`<div class="sec"><details><summary style="font-weight:700">Phrase bank (${P.phrases.length})</summary>${P.phrases.slice().reverse().map(p=>`<div class="line" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><div class="tx" style="flex:1">${tapWords(p.es)}<div class="note" style="margin:0">${esc(p.en)}</div></div><button class="play" data-say="${esc(p.es)}">▶︎</button></div>`).join("")}</details></div>`;
   if(P.sessions.length) h+=`<div class="sec"><details><summary style="font-weight:700">Session history</summary>${P.sessions.slice().reverse().map(s=>`<div class="hist"><b>${new Date(s.date).toLocaleDateString()}</b> · ${esc(s.scenario)} · ${cap(s.level)}<br><span class="note">${s.turns} turns · pron ${s.avgPron??"–"} · ${s.correctPct}% correct · ${s.minutes}m</span>${s.summary?`<div class="note" style="margin-top:4px">${esc(s.summary)}</div>`:""}</div>`).join("")}</details></div>`;
   h+=`<div class="sec"><h3>Backup</h3><p class="note" style="margin-top:0">Progress is saved on this phone. Deleting the home-screen icon erases it, so export a backup now and then.</p>
     <div class="row"><button class="btn ghost" id="exportP">Export</button><button class="btn ghost" id="importP">Import</button></div><input type="file" id="importFile" accept="application/json,.json" style="display:none"></div>`;
@@ -1076,6 +1086,14 @@ async function importP(e){
     P=Object.assign(PBLANK(),p); saveP(); renderProgress(); renderToday(); toast(`Restored ${P.sessions.length} sessions`);
   }catch(err){ toast("Import failed: "+err.message,4000); }
 }
+
+/* ---------- tap any Spanish word to hear it ---------- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest(".tw"); if(!t) return;
+  e.stopPropagation(); unlockAudio();
+  t.classList.add("hit"); setTimeout(()=>t.classList.remove("hit"),600);
+  say(t.dataset.w,"-30%");
+},true);
 
 /* ---------- boot ---------- */
 $("#appVer").textContent=APP_VERSION;
