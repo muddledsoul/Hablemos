@@ -113,6 +113,22 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 .banner{background:#2a2410;border:1px solid var(--ok);border-radius:12px;padding:12px;margin-bottom:12px;font-size:14.5px}
 .goal{align-self:stretch;background:#173a33;border:1px solid var(--accent2);border-radius:12px;padding:10px 12px;font-size:14px}
 svg.trend text{fill:var(--muted);font-size:10px}
+/* vocab */
+.vocabBtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:6px 0 4px}
+.vcard{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 20px}
+.vcard.pop{animation:pop .35s ease-out}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.vpic.big{font-size:150px;line-height:1.15;animation:floaty 3s ease-in-out infinite;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+.swatch.big{width:170px;height:170px;border-radius:50%;border:3px solid var(--line);animation:floaty 3s ease-in-out infinite;box-shadow:0 10px 24px rgba(0,0,0,.45)}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+.vans{display:none;margin-top:14px}.vans.on{display:block;animation:pop .25s ease-out}
+.vword{font-size:30px;font-weight:700}
+.vans.en{font-size:18px;color:var(--muted);margin-top:8px}
+.vres{margin-top:14px;min-height:40px;font-size:15px}
+.vdone{text-align:center;padding:30px 10px}
+#vMic{width:76px;height:76px;border-radius:50%;background:var(--accent);display:grid;place-items:center;margin:0 auto}
+#vMic svg{width:32px;height:32px;fill:#04241c}
+#vMic.rec{background:var(--bad);animation:pulse 1.4s infinite}#vMic.rec svg{fill:#fff}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
 .side{width:52px;height:52px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:20px}
@@ -206,6 +222,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
   <header><h1>¡Hablemos!</h1><button class="iconbtn" id="openProgress" aria-label="Progress">📈</button><button class="iconbtn" id="openSettings" aria-label="Settings">⚙︎</button></header>
   <div class="scroll">
     <div id="todayCard"></div>
+    <button class="vocabBtn" id="openVocab"><span style="font-size:30px">🃏</span><span><b>Vocabulary flashcards</b><br><span class="note" style="margin:0">Picture cards: say the word in Spanish</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
     <label>Or pick any scenario</label>
     <div class="grid" id="scenarios"></div>
     <div id="customWrap" style="display:none">
@@ -232,6 +249,27 @@ svg.trend text{fill:var(--muted);font-size:10px}
 <section id="s-progress" class="screen">
   <header><button class="iconbtn" id="progBack" aria-label="Back">‹</button><h1>My progress</h1></header>
   <div class="scroll" id="progBody"></div>
+</section>
+
+<!-- VOCAB SETS -->
+<section id="s-vocab" class="screen">
+  <header><button class="iconbtn" id="vocabBack" aria-label="Back">‹</button><h1>Vocabulary</h1></header>
+  <div class="scroll" id="vocabSets"></div>
+</section>
+
+<!-- FLASHCARD DECK -->
+<section id="s-deck" class="screen">
+  <header><button class="iconbtn" id="deckBack" aria-label="Back">‹</button><h1 id="deckTitle">Deck</h1><button class="iconbtn" id="deckReset" style="width:auto;padding:0 12px;font-size:14px;font-weight:600">Reset</button></header>
+  <div style="padding:10px 16px 0"><div class="note" id="deckCount" style="margin:0"></div><div class="meter" style="margin:6px 0 0"><i id="deckBar" style="width:0"></i></div></div>
+  <div class="scroll" id="cardBox"></div>
+  <div class="bar" id="deckCtrls">
+    <div class="row" style="margin-bottom:12px"><button class="btn ghost" id="vShowEs">Show Spanish</button><button class="btn ghost" id="vShowEn">Show English</button></div>
+    <div class="ctrls">
+      <div class="l" style="flex-direction:column;align-items:center;gap:4px"><button class="side" id="vKnew" aria-label="I knew it" style="font-size:18px;font-weight:700">✓</button><span class="note" style="margin:0;font-size:11.5px">I knew it</span></div>
+      <div style="text-align:center"><button id="vMic" aria-label="Say it"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg></button><div class="note" id="vMicLbl" style="margin-top:6px">Tap and say it</div></div>
+      <div class="r" style="flex-direction:column;align-items:center;gap:4px"><button class="side" id="vSkip" aria-label="Skip" style="font-size:20px">⏭</button><span class="note" style="margin:0;font-size:11.5px">Skip</span></div>
+    </div>
+  </div>
 </section>
 
 <!-- CHAT -->
@@ -271,7 +309,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "10 (tap words to hear them)";
+const APP_VERSION = "11 (vocabulary flashcards)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -461,6 +499,8 @@ function profileForPrompt(){
   if(tw.length) s+=`\n- Words they often mispronounce: ${tw.join(", ")}. Work a few into your lines so they hear them and have reason to say them.`;
   const ph=P.phrases.slice(-8).map(p=>p.es);
   if(ph.length) s+=`\n- Phrases they recently learned: ${ph.join(" | ")}. Create chances to reuse them.`;
+  const vw=(typeof V!=="undefined")?Object.values(V.learned).flat().slice(-15):[];
+  if(vw.length) s+=`\n- Vocabulary words they learned with flashcards: ${vw.join(", ")}. Use some of them so they hear them in context.`;
   if(session&&session.goal) s+=`\n- TODAY'S TRAINING GOAL: ${session.goal}. Shape the conversation around it.`;
   return s?`\n\nLEARNER PROFILE (use it, keep it invisible):${s}`:"";
 }
@@ -988,6 +1028,8 @@ function renderProgress(){
   const rd=readiness();
   let h=`<div class="tiles">
     <div class="tile"><div class="v">${P.sessions.length}</div><div class="k">sessions</div></div>
+    <div class="tile"><div class="v">${vocabWordsLearned()}</div><div class="k">vocab words learned</div></div>
+    <div class="tile"><div class="v">${Object.keys(V.learned).filter(k=>{const s=VOCAB.find(x=>x.id===k);return s&&V.learned[k].length===s.w.length;}).length}/${VOCAB.length}</div><div class="k">vocab sets complete</div></div>
     <div class="tile"><div class="v">${streak()}🔥</div><div class="k">day streak</div></div>
     <div class="tile"><div class="v">${mean(S5.map(s=>s.avgPron))??"–"}</div><div class="k">pronunciation (last 5)</div></div>
     <div class="tile"><div class="v">${mins<60?mins+"m":(mins/60).toFixed(1)+"h"}</div><div class="k">time speaking Spanish</div></div>
@@ -1086,6 +1128,238 @@ async function importP(e){
     P=Object.assign(PBLANK(),p); saveP(); renderProgress(); renderToday(); toast(`Restored ${P.sessions.length} sessions`);
   }catch(err){ toast("Import failed: "+err.message,4000); }
 }
+
+/* ---------- vocabulary flashcards ---------- */
+// Each word: [picture, Spanish (with article), English, alternates accepted (| separated), optional note]
+// Colors use a hex value as the picture.
+const VOCAB=[
+ {id:"basics",ic:"🏠",t:"Basics",w:[
+  ["🏠","la casa","house"],["💧","el agua","water"],["☀️","el sol","sun"],["🌙","la luna","moon"],["⭐","la estrella","star"],
+  ["🌳","el árbol","tree"],["🌸","la flor","flower"],["🌧️","la lluvia","rain"],["🔥","el fuego","fire"],["📖","el libro","book"],
+  ["💵","el dinero","money","lana|plata","lana (MX) and plata are slang for money"],["🔑","la llave","key"],["⌚","el reloj","watch / clock"],
+  ["🚪","la puerta","door"],["🪟","la ventana","window"],["👨","el hombre","man"],["👩","la mujer","woman"],["👶","el bebé","baby"],
+  ["👦","el niño","boy","chico|muchacho|chamaco"],["👧","la niña","girl","chica|muchacha"]]},
+ {id:"fruits",ic:"🍎",t:"Fruits",w:[
+  ["🍎","la manzana","apple"],["🍌","el plátano","banana","banana|banano|guineo","Called banano in Colombia/Central America, plátano in Mexico"],["🍊","la naranja","orange"],
+  ["🍋","el limón","lemon / lime","lima"],["🍇","las uvas","grapes","uva"],["🍓","la fresa","strawberry","frutilla"],["🍉","la sandía","watermelon","patilla"],
+  ["🍍","la piña","pineapple"],["🥭","el mango","mango"],["🍑","el durazno","peach","melocotón"],["🍐","la pera","pear"],
+  ["🍒","las cerezas","cherries","cereza"],["🥥","el coco","coconut"],["🥝","el kiwi","kiwi"],["🫐","los arándanos","blueberries","arándano"],
+  ["🍈","el melón","melon"],["🥑","el aguacate","avocado","palta"]]},
+ {id:"veg",ic:"🥕",t:"Vegetables",w:[
+  ["🥕","la zanahoria","carrot"],["🥔","la papa","potato","patata"],["🍅","el tomate","tomato","jitomate","In central Mexico a red tomato is a jitomate"],["🧅","la cebolla","onion"],
+  ["🧄","el ajo","garlic"],["🥦","el brócoli","broccoli"],["🌽","el maíz","corn","elote|choclo","An ear of corn is an elote in Mexico"],["🥒","el pepino","cucumber"],
+  ["🥬","la lechuga","lettuce"],["🌶️","el chile","chili pepper","ají|picante"],["🫑","el pimiento","bell pepper","pimentón|chile morrón|morrón"],["🍆","la berenjena","eggplant"],
+  ["🍄","el champiñón","mushroom","hongo|champiñones|hongos"],["🫘","los frijoles","beans","frijol|fríjoles|fríjol|frejoles|porotos"],["🎃","la calabaza","pumpkin / squash","ayote|zapallo"],["🫛","los chícharos","peas","chícharo|arvejas|guisantes"]]},
+ {id:"colors",ic:"🎨",t:"Colors",w:[
+  ["#e53935","rojo","red","roja"],["#1e63e9","azul","blue"],["#2e9e4a","verde","green"],["#f6d32d","amarillo","yellow","amarilla"],
+  ["#f57c1f","naranja","orange","anaranjado|anaranjada"],["#7b3fbf","morado","purple","morada|violeta|púrpura"],["#f48fb1","rosa","pink","rosado|rosada"],
+  ["#111111","negro","black","negra"],["#ffffff","blanco","white","blanca"],["#8a8f94","gris","gray"],["#7a4a24","café","brown","marrón"],
+  ["#d4af37","dorado","gold","dorada"],["#c0c0c0","plateado","silver","plateada|plata"],["#2bb3c0","turquesa","turquoise"]]},
+ {id:"food",ic:"🍽️",t:"Food",w:[
+  ["🍞","el pan","bread"],["🧀","el queso","cheese"],["🥚","el huevo","egg","huevos"],["🍗","el pollo","chicken"],["🥩","la carne","meat / steak","bistec"],
+  ["🐟","el pescado","fish (food)","Pescado is fish as food; a live fish is un pez"],["🍚","el arroz","rice"],["🍝","la pasta","pasta","espagueti|fideos"],["🥗","la ensalada","salad"],
+  ["🍲","la sopa","soup","caldo"],["🌮","el taco","taco","tacos"],["🌯","el burrito","burrito"],["🍕","la pizza","pizza"],["🍔","la hamburguesa","hamburger"],
+  ["🍟","las papas fritas","french fries","papitas"],["🥓","el tocino","bacon","tocineta"],["🧈","la mantequilla","butter"],["🍰","el pastel","cake","torta|ponqué"],
+  ["🍦","el helado","ice cream","nieve"],["🍪","la galleta","cookie","galletas"],["🍫","el chocolate","chocolate"]]},
+ {id:"drinks",ic:"☕",t:"Drinks",w:[
+  ["☕","el café","coffee","cafecito"],["🍵","el té","tea"],["🥛","la leche","milk"],["🧃","el jugo","juice","zumo"],["🍺","la cerveza","beer","chela|birra"],
+  ["🍷","el vino","wine"],["🥤","el refresco","soda","soda|gaseosa"],["🧊","el hielo","ice"],["🍹","el coctel","cocktail","cóctel"],["🍶","el licor","liquor"],["🧉","el mate","mate"],["🍾","el champán","champagne","champaña|champaña"]]},
+ {id:"clothes",ic:"👕",t:"Clothes",w:[
+  ["👕","la camiseta","t-shirt","playera|remera|polera|camisa"],["👔","la camisa","dress shirt"],["👖","los pantalones","pants","pantalón|jeans"],["👗","el vestido","dress"],
+  ["🧥","la chaqueta","jacket / coat","chamarra|abrigo|chamarra"],["🧦","los calcetines","socks","calcetín|medias"],["👟","los tenis","sneakers","zapatillas|tenis"],["👞","los zapatos","shoes","zapato"],
+  ["👢","las botas","boots","bota"],["🧢","la gorra","cap"],["👒","el sombrero","hat"],["🧣","la bufanda","scarf"],["🧤","los guantes","gloves","guante"],
+  ["🩳","los shorts","shorts","pantalones cortos|short"],["👜","la bolsa","purse / bag","cartera|bolso"],["🕶️","los lentes de sol","sunglasses","gafas de sol|lentes oscuros"],
+  ["👓","los lentes","glasses","gafas|anteojos"],["🎒","la mochila","backpack"],["🩲","la ropa interior","underwear","calzones"],["🥾","las botas de montaña","hiking boots","botas"]]},
+ {id:"office",ic:"💼",t:"Office",w:[
+  ["🖊️","la pluma","pen","bolígrafo|lapicero|esfero"],["✏️","el lápiz","pencil"],["📎","el clip","paper clip","sujetapapeles"],["✂️","las tijeras","scissors"],
+  ["📏","la regla","ruler"],["📁","la carpeta","folder"],["📓","el cuaderno","notebook","libreta"],["📋","el portapapeles","clipboard"],["📌","la tachuela","pushpin","chinche|chincheta"],
+  ["🗑️","el bote de basura","trash can","basurero|papelera|caneca|basura"],["📅","el calendario","calendar"],["🖨️","la impresora","printer"],["💼","el maletín","briefcase"],
+  ["🗄️","el archivero","file cabinet","archivador"],["📄","la hoja","sheet of paper","papel|hoja de papel"],["✉️","el sobre","envelope"],["📦","la caja","box"],
+  ["🪑","la silla","chair"],["🏢","la oficina","office"],["🖍️","el crayón","crayon","crayola"]]},
+ {id:"electronics",ic:"📱",t:"Electronics",w:[
+  ["📱","el celular","cell phone","teléfono|móvil|celu"],["💻","la laptop","laptop","computadora portátil|portátil|lap"],["🖥️","la computadora","computer","ordenador|computador"],
+  ["⌨️","el teclado","keyboard"],["🖱️","el ratón","mouse","mouse"],["🎧","los audífonos","headphones","auriculares|audífono"],["📺","la televisión","television","tele|televisor|tv"],
+  ["📷","la cámara","camera"],["🔋","la batería","battery","pila"],["🔌","el enchufe","plug","clavija"],["🎮","el control","game controller","control remoto|videojuego"],
+  ["📻","el radio","radio","radio"],["🎙️","el micrófono","microphone"],["🔦","la linterna","flashlight","lámpara"],["⏰","el despertador","alarm clock","alarma"],["🖨️","la impresora","printer"]]},
+ {id:"house",ic:"🛋️",t:"Around the house",w:[
+  ["🛏️","la cama","bed"],["🛋️","el sofá","sofa / couch","sillón"],["🚿","la regadera","shower","ducha"],["🛁","la tina","bathtub","bañera"],
+  ["🚽","el inodoro","toilet","excusado|escusado|baño|sanitario"],["🪞","el espejo","mirror"],["🧹","la escoba","broom"],["🧺","la canasta","basket","cesta|canasto"],
+  ["🧻","el papel de baño","toilet paper","papel higiénico|papel sanitario"],["🧼","el jabón","soap"],["🪥","el cepillo de dientes","toothbrush","cepillo"],
+  ["🕯️","la vela","candle"],["💡","el foco","light bulb","bombilla|bombillo|bombilla"],["🖼️","el cuadro","picture / painting","pintura"],["🪴","la planta","plant","maceta"],
+  ["🧸","el peluche","stuffed animal","oso de peluche"],["🔨","el martillo","hammer"],["🪜","la escalera","ladder / stairs"],["🧽","la esponja","sponge"],["🪣","la cubeta","bucket","balde|cubo"]]},
+ {id:"kitchen",ic:"🍳",t:"Kitchen",w:[
+  ["🍳","el sartén","frying pan","la sartén|sartén"],["🥄","la cuchara","spoon"],["🔪","el cuchillo","knife"],["🍴","el tenedor","fork","cubiertos"],
+  ["🍽️","el plato","plate"],["🥣","el tazón","bowl","bol|plato hondo"],["☕","la taza","mug / cup","pocillo"],["🥃","el vaso","glass"],["🫖","la tetera","teapot / kettle"],
+  ["🫕","la olla","pot","cacerola"],["🧂","la sal","salt","salero"],["🫙","el frasco","jar"],["🥢","los palillos","chopsticks","palitos"],["🍼","el biberón","baby bottle","mamila|tetero|pacha"],
+  ["🥤","el popote","straw","pajita|pitillo|sorbete"],["🧊","el hielo","ice"],["🧯","el extintor","fire extinguisher","extinguidor"],["🔥","la estufa","stove","cocina"]]},
+ {id:"restaurant",ic:"🍷",t:"Restaurant",w:[
+  ["🧑‍🍳","el cocinero","cook / chef","chef|cocinera"],["🤵","el mesero","waiter","camarero|mozo|mesera"],["🧾","la cuenta","the check / bill"],
+  ["💳","la tarjeta","card","tarjeta de crédito"],["💰","la propina","tip"],["🍷","la copa","wine glass","copa de vino"],["🍾","la botella","bottle"],
+  ["🧻","la servilleta","napkin"],["🍨","el postre","dessert"],["📋","el menú","menu","la carta|carta"],["🥖","el pan","bread"],["🪑","la mesa","table","mesa"],
+  ["🥗","la entrada","appetizer / starter","entrada|botana|aperitivo"],["🍖","el plato fuerte","main course","plato principal"],["🌶️","la salsa","salsa / sauce"],["🧂","la pimienta","pepper","pimienta"]]},
+ {id:"store",ic:"🛒",t:"Store",w:[
+  ["🛒","el carrito","shopping cart","carro"],["🛍️","la bolsa","shopping bag","bolsas|bolsa de compras"],["💳","la tarjeta de crédito","credit card","tarjeta"],
+  ["💵","el efectivo","cash","dinero|billete|billetes"],["🪙","la moneda","coin","monedas"],["🧾","el recibo","receipt","ticket|comprobante|factura"],["🏷️","la etiqueta","price tag","precio"],
+  ["🏪","la tienda","store","tiendita"],["🏬","el centro comercial","mall","plaza|mall"],["🎁","el regalo","gift"],["📦","el paquete","package"],["⚖️","la báscula","scale","balanza|pesa"],
+  ["🧑‍💼","el cajero","cashier","cajera|dependiente"],["🛗","el elevador","elevator","ascensor"],["🚪","la salida","exit","salida"],["🔖","el descuento","discount","oferta|rebaja"]]},
+ {id:"animals",ic:"🐶",t:"Animals",w:[
+  ["🐶","el perro","dog","perrito"],["🐱","el gato","cat","gatito"],["🐴","el caballo","horse"],["🐄","la vaca","cow"],["🐖","el cerdo","pig","puerco|chancho|marrano"],
+  ["🐔","la gallina","hen / chicken","pollo|gallo"],["🐦","el pájaro","bird","ave"],["🐠","el pez","fish (alive)","pescado","A live fish is un pez; as food it's pescado"],["🐭","el ratón","mouse","rata"],
+  ["🐰","el conejo","rabbit"],["🐻","el oso","bear"],["🐒","el mono","monkey","chango"],["🦁","el león","lion"],["🐘","el elefante","elephant"],
+  ["🐍","la serpiente","snake","culebra|víbora"],["🐢","la tortuga","turtle"],["🦋","la mariposa","butterfly"],["🐝","la abeja","bee"],["🦆","el pato","duck"],["🐑","la oveja","sheep"]]},
+ {id:"transport",ic:"🚌",t:"Getting around",w:[
+  ["🚗","el carro","car","coche|auto|automóvil"],["🚌","el autobús","bus","camión|bus|buseta|guagua","In Mexico a city bus is often a camión"],["🚕","el taxi","taxi"],
+  ["✈️","el avión","airplane"],["🚲","la bicicleta","bicycle","bici"],["🏍️","la moto","motorcycle","motocicleta"],["🚆","el tren","train"],["🚢","el barco","ship / boat","buque"],
+  ["🚚","el camión","truck","tráiler|camión de carga"],["🚑","la ambulancia","ambulance"],["🚓","la patrulla","police car","carro de policía"],["🚁","el helicóptero","helicopter"],
+  ["⛽","la gasolinera","gas station","bomba"],["🚦","el semáforo","traffic light"],["🛣️","la carretera","highway","autopista"],["🗺️","el mapa","map"]]},
+ {id:"body",ic:"✋",t:"Body",w:[
+  ["👁️","el ojo","eye","ojos"],["👂","la oreja","ear","oído|orejas"],["👃","la nariz","nose"],["👄","la boca","mouth"],["🦷","el diente","tooth","dientes|muela"],
+  ["👅","la lengua","tongue"],["✋","la mano","hand","manos"],["🦶","el pie","foot","pies"],["🦵","la pierna","leg","piernas"],["💪","el brazo","arm","brazos"],
+  ["🧠","el cerebro","brain"],["❤️","el corazón","heart"],["💇","el pelo","hair","cabello"],["👍","el dedo","finger / thumb","dedos|pulgar"],["🦴","el hueso","bone"],["🧔","la barba","beard"]]}
+];
+const VKEY="hablemos.vocab.v1";
+let V=(()=>{ try{ return Object.assign({learned:{},stats:{}},JSON.parse(localStorage.getItem(VKEY)||"{}")); }catch(e){ return {learned:{},stats:{}}; } })();
+function saveV(){ try{ localStorage.setItem(VKEY,JSON.stringify(V)); }catch(e){} }
+const noAcc=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-zñ\s]/g," ").replace(/\s+/g," ").trim();
+const ARTS=/^(el|la|los|las|un|una|unos|unas)\s+/;
+function vocabTargets(card){
+  const list=[card[1]].concat(card[3]?card[3].split("|"):[]);
+  return [...new Set(list.map(x=>noAcc(x).replace(ARTS,"")).filter(Boolean))];
+}
+// Did what they said contain the word (article optional, singular/plural forgiven)?
+function vocabMatch(card, heard){
+  const h=" "+noAcc(heard).replace(/\b(el|la|los|las|un|una|unos|unas|es|son|eso|esto|este|esta)\b/g," ").replace(/\s+/g," ").trim()+" ";
+  for(const t of vocabTargets(card)){
+    const forms=[t, t+"s", t+"es", t.replace(/es$/,""), t.replace(/s$/,"")];
+    if(forms.some(f=>f&&h.includes(" "+f+" "))) return true;
+  }
+  return false;
+}
+function vocabPic(card,big){
+  if(card[0].startsWith("#")) return `<div class="swatch${big?" big":""}" style="background:${card[0]}"></div>`;
+  return `<div class="vpic${big?" big":""}">${card[0]}</div>`;
+}
+function learnedIn(id){ return (V.learned[id]||[]).length; }
+function vocabWordsLearned(){ return Object.values(V.learned).reduce((a,l)=>a+l.length,0); }
+
+function openVocab(){ renderVocabSets(); show("s-vocab"); }
+function renderVocabSets(){
+  const total=VOCAB.reduce((a,s)=>a+s.w.length,0), got=vocabWordsLearned();
+  let h=`<p class="note" style="margin-top:0">Look at the picture and say the word in Spanish. Cards you get right without peeking leave the deck. ${got}/${total} words learned.</p><div class="grid">`;
+  for(const s of VOCAB){
+    const n=learnedIn(s.id), pct=Math.round(100*n/s.w.length);
+    h+=`<button class="card" data-set="${s.id}"><div class="ic">${s.ic}</div><div class="t">${esc(s.t)}</div><div class="d">${n===s.w.length?"✅ All learned":`${n}/${s.w.length} learned`}</div><div class="meter" style="margin:6px 0 0"><i style="width:${pct}%"></i></div></button>`;
+  }
+  $("#vocabSets").innerHTML=h+`</div>`;
+}
+$("#vocabSets").addEventListener("click",e=>{ const c=e.target.closest("[data-set]"); if(c) startDeck(c.dataset.set); });
+
+let deck=null; // {set, queue:[idx], cur, peekedEs, peekedEn, listening, resetArm}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function startDeck(id){
+  if(needKeys()){ toast("Add your keys first"); openSettings(); return; }
+  unlockAudio();
+  const set=VOCAB.find(s=>s.id===id); const done=new Set(V.learned[id]||[]);
+  deck={set, queue:shuffle(set.w.map((_,i)=>i).filter(i=>!done.has(set.w[i][1]))), peekedEs:false, peekedEn:false, tries:0};
+  $("#deckTitle").textContent=set.ic+" "+set.t;
+  show("s-deck"); renderCard();
+}
+function renderCard(){
+  const s=deck.set, n=learnedIn(s.id), total=s.w.length;
+  $("#deckCount").textContent=`${n}/${total} learned · ${deck.queue.length} to go`;
+  $("#deckBar").style.width=Math.round(100*n/total)+"%";
+  const box=$("#cardBox");
+  if(!deck.queue.length){
+    box.innerHTML=`<div class="vdone"><div style="font-size:64px">🎉</div><h2>¡Todo listo!</h2><p class="note">You learned all ${total} words in ${esc(s.t)}.</p>
+      <div style="height:10px"></div><button class="btn" id="deckAgain">Reset and practice again</button><div style="height:10px"></div><button class="btn ghost" id="deckBack2">Pick another set</button></div>`;
+    $("#deckAgain").onclick=()=>{ V.learned[s.id]=[]; saveV(); startDeck(s.id); };
+    $("#deckBack2").onclick=()=>openVocab();
+    $("#deckCtrls").style.display="none"; return;
+  }
+  $("#deckCtrls").style.display="";
+  const c=s.w[deck.queue[0]];
+  deck.peekedEs=false; deck.peekedEn=false; deck.tries=0;
+  box.innerHTML=`<div class="vcard pop">${vocabPic(c,true)}
+    <div class="vans" id="vEs"><span class="vword">${tapWords(c[1])}</span> <button class="play" data-say="${esc(c[1])}">▶︎</button>${c[4]?`<div class="note" style="margin:4px 0 0">${esc(c[4])}</div>`:""}</div>
+    <div class="vans en" id="vEn">${esc(c[2])}</div>
+    <div class="vres" id="vRes"></div></div>`;
+  $("#vMic").classList.remove("rec"); $("#vMicLbl").textContent="Tap and say it";
+}
+function revealEs(auto){
+  const c=deck.set.w[deck.queue[0]];
+  if(!auto) deck.peekedEs=true;
+  $("#vEs").classList.add("on"); say(c[1],"-15%");
+}
+function nextCard(learned){
+  const s=deck.set, idx=deck.queue.shift(), c=s.w[idx];
+  if(learned){
+    const l=V.learned[s.id]=V.learned[s.id]||[]; if(!l.includes(c[1])) l.push(c[1]);
+    V.stats.lastDay=dayKey(); saveV();
+  } else {
+    // Bring it back a few cards later (or at the end of a short deck).
+    const pos=Math.min(deck.queue.length, 3+Math.floor(Math.random()*3));
+    deck.queue.splice(pos,0,idx);
+  }
+  renderCard();
+}
+// One-shot listen: stops by itself after a short pause.
+function listenOnce(){
+  return new Promise((res,rej)=>{
+    const sdk=window.SpeechSDK; let cfg;
+    try{ cfg=speechConfig(); }catch(e){ return rej(e); }
+    cfg.speechRecognitionLanguage=RECOG_LOCALE; cfg.outputFormat=sdk.OutputFormat.Detailed;
+    if(sdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs!==undefined) cfg.setProperty(sdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs,"700");
+    if(sdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs!==undefined) cfg.setProperty(sdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,"6000");
+    const ac=sdk.AudioConfig.fromDefaultMicrophoneInput(); const r=new sdk.SpeechRecognizer(cfg,ac);
+    new sdk.PronunciationAssessmentConfig("",sdk.PronunciationAssessmentGradingSystem.HundredMark,sdk.PronunciationAssessmentGranularity.Phoneme,false).applyTo(r);
+    const fin=()=>{ try{r.close();}catch(e){} try{ac.close();}catch(e){} };
+    r.recognizeOnceAsync(result=>{
+      let j=null; try{ j=JSON.parse(result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult)); }catch(e){}
+      fin(); res(result.reason===sdk.ResultReason.RecognizedSpeech&&j?aggregate([j]):{text:"",words:[],pron:null});
+    }, err=>{ fin(); rej(new Error(String(err))); });
+  });
+}
+async function vocabMic(){
+  if(!deck||!deck.queue.length||deck.listening) return;
+  unlockAudio(); $("#player").pause();
+  const c=deck.set.w[deck.queue[0]];
+  deck.listening=true; $("#vMic").classList.add("rec"); $("#vMicLbl").textContent="Listening…";
+  let t;
+  try{ t=await listenOnce(); }catch(e){ toast("Mic error: "+e.message,4000); t=null; }
+  deck.listening=false; $("#vMic").classList.remove("rec"); $("#vMicLbl").textContent="Tap and say it";
+  if(!t) return;
+  const res=$("#vRes");
+  if(!t.text){ res.innerHTML=`<span class="note">Didn't hear anything. Tap the mic and try again.</span>`; return; }
+  deck.tries++;
+  const ok=vocabMatch(c,t.text);
+  const pr=t.pron!=null?`<span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span>`:"";
+  if(ok){
+    $("#vEs").classList.add("on");
+    const clean=!deck.peekedEs;
+    res.innerHTML=`<div class="ok" style="font-size:18px">✓ ¡Correcto!</div><div style="margin-top:6px">${pr}</div>
+      <div class="note">${clean?"Card learned. It's out of the deck.":"Good! You peeked, so it'll come back once more."}${t.pron!=null&&t.pron<60?" Tap the word above to hear it, and work on the sound.":""}</div>`;
+    say(c[1],"-15%");
+    setTimeout(()=>{ if(deck&&deck.set.w[deck.queue[0]]===c) nextCard(clean); },2200);
+  } else {
+    res.innerHTML=`<div class="err">Not quite. I heard: "${esc(t.text)}"</div><div style="margin-top:6px">${pr}</div>
+      <div class="note">${deck.tries>=2?"Showing the answer. Listen, then try saying it.":"Try again, or tap Show Spanish."}</div>`;
+    if(deck.tries>=2){ revealEs(false); }
+  }
+}
+$("#vMic").onclick=vocabMic;
+$("#vShowEs").onclick=()=>{ if(deck&&deck.queue.length) revealEs(false); };
+$("#vShowEn").onclick=()=>{ if(deck&&deck.queue.length){ deck.peekedEn=true; $("#vEn").classList.add("on"); } };
+$("#vKnew").onclick=()=>{ if(deck&&deck.queue.length){ const c=deck.set.w[deck.queue[0]]; if(deck.peekedEs){ toast("You peeked. It'll come back once more."); nextCard(false); } else { toast("Learned: "+c[1]); nextCard(true); } } };
+$("#vSkip").onclick=()=>{ if(deck&&deck.queue.length) nextCard(false); };
+$("#cardBox").addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say,"-15%"); });
+$("#deckBack").onclick=()=>openVocab();
+$("#vocabBack").onclick=goHome;
+$("#openVocab").onclick=openVocab;
+$("#deckReset").onclick=()=>{
+  const b=$("#deckReset");
+  if(!deck.resetArm){ deck.resetArm=true; b.textContent="Tap again to reset"; setTimeout(()=>{ if(deck){ deck.resetArm=false; b.textContent="Reset"; } },3000); return; }
+  V.learned[deck.set.id]=[]; saveV(); toast("Set reset"); startDeck(deck.set.id); $("#deckReset").textContent="Reset";
+};
 
 /* ---------- tap any Spanish word to hear it ---------- */
 document.addEventListener("click",e=>{
