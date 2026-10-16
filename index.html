@@ -258,7 +258,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const RECOG_LOCALE = "es-MX";
-const APP_VERSION = "7 (reliable reviews)";
+const APP_VERSION = "8 (reliable reviews, fixed)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -365,32 +365,33 @@ async function claude(system, messages, maxTokens=1200){
   const j=await r.json();
   return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
 }
-// Ask Claude for a JSON object. Forces a tool call so the reply is always structured data,
-// gives long replies room, and retries once with a bigger budget if the reply is cut off.
+// Ask Claude for a JSON object (plain text request; works on every model).
+// Gives replies room, retries with a bigger budget if cut off, and asks once for a
+// clean resend if the reply isn't valid JSON.
 async function claudeJSON(system, messages, maxTokens=1500){
-  let last="";
-  for(let attempt=0; attempt<2; attempt++){
+  let msgs=messages, last="";
+  for(let attempt=0; attempt<3; attempt++){
     const r=await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"content-type":"application/json","x-api-key":S.clKey.trim(),"anthropic-version":"2023-06-01",
                "anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:S.model, max_tokens:maxTokens, system, messages,
-        tools:[{name:"respond",description:"Send your response. The input must follow exactly the JSON structure described in the system prompt.",
-                input_schema:{type:"object",additionalProperties:true}}],
-        tool_choice:{type:"tool",name:"respond"}})
+      body:JSON.stringify({model:S.model, max_tokens:maxTokens, system, messages:msgs})
     });
     if(!r.ok){ const t=await r.text(); throw new Error("Claude "+r.status+": "+t.slice(0,240)); }
     const j=await r.json();
-    const tu=(j.content||[]).find(b=>b.type==="tool_use");
-    if(j.stop_reason!=="max_tokens"&&tu&&tu.input&&typeof tu.input==="object"&&Object.keys(tu.input).length) return tu.input;
     const txt=(j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-    if(j.stop_reason!=="max_tokens"&&txt){ try{ return parseJSON(txt); }catch(e){} }
-    last=j.stop_reason==="max_tokens"?"reply was cut off":("unexpected reply: "+(txt||JSON.stringify(j.content||"")).slice(0,100));
-    maxTokens=Math.min(maxTokens*2,8000);
+    if(j.stop_reason==="max_tokens"){ last="reply was cut off"; maxTokens=Math.min(maxTokens*2,8000); continue; }
+    try{ return parseJSON(txt); }
+    catch(e){
+      last="reply wasn't valid JSON";
+      msgs=messages.concat([{role:"assistant",content:txt||"(empty)"},
+        {role:"user",content:"That reply wasn't a valid JSON object. Send the same answer again as ONLY the raw JSON object: no markdown, no code fences, no text before or after it."}]);
+    }
   }
   throw new Error("The tutor's reply came back garbled ("+last+"). Tap Try again.");
 }
 function parseJSON(t){
+  t=String(t||"").replace(/```(?:json)?/gi,"");
   const a=t.indexOf("{"), b=t.lastIndexOf("}");
   if(a<0||b<a) throw new Error("Tutor reply wasn't in the expected format");
   return JSON.parse(t.slice(a,b+1));
