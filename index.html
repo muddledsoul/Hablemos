@@ -258,7 +258,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const RECOG_LOCALE = "es-MX";
-const APP_VERSION = "6 (progress + plans)";
+const APP_VERSION = "7 (reliable reviews)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -364,6 +364,31 @@ async function claude(system, messages, maxTokens=1200){
   if(!r.ok){ let t=await r.text(); throw new Error("Claude "+r.status+": "+t.slice(0,240)); }
   const j=await r.json();
   return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+// Ask Claude for a JSON object. Forces a tool call so the reply is always structured data,
+// gives long replies room, and retries once with a bigger budget if the reply is cut off.
+async function claudeJSON(system, messages, maxTokens=1500){
+  let last="";
+  for(let attempt=0; attempt<2; attempt++){
+    const r=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-api-key":S.clKey.trim(),"anthropic-version":"2023-06-01",
+               "anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:S.model, max_tokens:maxTokens, system, messages,
+        tools:[{name:"respond",description:"Send your response. The input must follow exactly the JSON structure described in the system prompt.",
+                input_schema:{type:"object",additionalProperties:true}}],
+        tool_choice:{type:"tool",name:"respond"}})
+    });
+    if(!r.ok){ const t=await r.text(); throw new Error("Claude "+r.status+": "+t.slice(0,240)); }
+    const j=await r.json();
+    const tu=(j.content||[]).find(b=>b.type==="tool_use");
+    if(j.stop_reason!=="max_tokens"&&tu&&tu.input&&typeof tu.input==="object"&&Object.keys(tu.input).length) return tu.input;
+    const txt=(j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    if(j.stop_reason!=="max_tokens"&&txt){ try{ return parseJSON(txt); }catch(e){} }
+    last=j.stop_reason==="max_tokens"?"reply was cut off":("unexpected reply: "+(txt||JSON.stringify(j.content||"")).slice(0,100));
+    maxTokens=Math.min(maxTokens*2,8000);
+  }
+  throw new Error("The tutor's reply came back garbled ("+last+"). Tap Try again.");
 }
 function parseJSON(t){
   const a=t.indexOf("{"), b=t.lastIndexOf("}");
@@ -617,9 +642,8 @@ async function turn(t){
   session.messages.push({role:"user",content});
   setBusy(true, t.kind==="start"?"Setting the scene…":"Tutor is thinking…");
   try{
-    const raw=await claude(systemPrompt(), session.messages);
-    const d=parseJSON(raw);
-    session.messages.push({role:"assistant",content:raw});
+    const d=await claudeJSON(systemPrompt(), session.messages, 1500);
+    session.messages.push({role:"assistant",content:JSON.stringify(d)});
     setBusy(false);
     if(t.kind!=="start"){
       addFeedback(t,d);
@@ -675,7 +699,7 @@ async function review(){
   const lines=session.log.map((l,i)=>`${i+1}. "${l.said}"${l.pron!=null?" (pron "+l.pron+")":""}${l.low.length?" low-scoring words: "+l.low.join(", "):""}${l.correction?" -> corrected: "+l.correction.corrected+" | notes: "+(l.correction.notes||[]).join("; "):" (correct)"}`).join("\n");
   const prior=P.focus.map(f=>f.t);
   try{
-    const raw=await claude(
+    const d=await claudeJSON(
       `You are a Spanish tutor reviewing a learner's speaking practice session (${VOICES[S.country].name} Spanish, level ${session.level}, scenario: ${session.scenario.t}${session.goal?", today's goal: "+session.goal:""}).
 The learner's OPEN WEAK SPOTS from earlier sessions are: ${prior.length?prior.map(p=>`"${p}"`).join(", "):"(none yet)"}.
 Respond ONLY with JSON:
@@ -688,8 +712,7 @@ Respond ONLY with JSON:
                "new":["new recurring problems worth tracking, as short labels like 'ser vs estar' or 'single r tap (pero, para)'; skip one-off slips"]},
  "level_note":"one honest sentence on how close they are to the next level and what's holding them back"}
 Give 3-5 phrases. Only put an item under improved/still if this session actually gave evidence.`,
-      [{role:"user",content:"Learner turns:\n"+lines}], 1200);
-    const d=parseJSON(raw);
+      [{role:"user",content:"Learner turns:\n"+lines}], 3000);
     applyReview(d);
     const rd=readiness(session.level);
     openSheet(`<h2>Session review</h2>
@@ -707,7 +730,7 @@ Give 3-5 phrases. Only put an item under improved/still if this session actually
       <div class="row"><button class="btn ghost" id="keepGoing">Keep talking</button><button class="btn" id="newConvo">New scenario</button></div>`);
     $("#keepGoing").onclick=closeSheet;
     $("#newConvo").onclick=()=>{ closeSheet(); goHome(); };
-  }catch(e){ openSheet(`<h2>Session review</h2><p class="note">Your scores were saved, but the written review failed:</p><p class="err">${esc(e.message)}</p><div class="row"><button class="btn ghost" onclick="closeSheet()">Close</button><button class="btn" onclick="closeSheet();goHome()">Home</button></div>`); }
+  }catch(e){ openSheet(`<h2>Session review</h2><p class="note">Your scores were saved, but the written review failed:</p><p class="err">${esc(e.message)}</p><button class="btn" onclick="review()">Try again</button><div style="height:10px"></div><div class="row"><button class="btn ghost" onclick="closeSheet()">Close</button><button class="btn ghost" onclick="closeSheet();goHome()">Home</button></div>`); }
 }
 
 // Fold a review into the long-term learner profile.
@@ -792,7 +815,7 @@ Respond ONLY with JSON, no markdown:
  "alternatives":[{"es":"another way to say it","note":"when to use it (more casual, formal, regional...)"}]}
 Keep breakdown to the useful chunks (max 6) and alternatives to 0-2.`;
   try{
-    const d=parseJSON(await claude(sys,[{role:"user",content:q}],900));
+    const d=await claudeJSON(sys,[{role:"user",content:q}],1500);
     lastAsk=d; renderAsk(d);
   }catch(e){ $("#askOut").innerHTML=`<p class="err">${esc(e.message)}</p>`; }
   askBusy=false;
@@ -1009,7 +1032,7 @@ Recently mastered: ${P.mastered.slice(-5).map(m=>m.t).join("; ")||"none"}.
 Often-mispronounced words: ${topTrouble(8).join(", ")||"none yet"}.
 Recent sessions:\n${recent}`;
   try{
-    const d=parseJSON(await claude(
+    const d=await claudeJSON(
 `You are a Spanish speaking coach designing the learner's next block of practice in a conversation app. Each session is a 10-15 minute spoken roleplay with an AI tutor that corrects them.
 Available scenarios: ${ids}, or "custom" with your own situation.
 Design 5 sessions that (1) target the open weak spots and tricky words, (2) build toward the next level's targets, (3) vary situations so it stays interesting, and (4) get slightly harder through the block. If there's no history yet, start with a gentle mix and make session 1 a baseline.
@@ -1019,7 +1042,7 @@ Respond ONLY with JSON:
  "sessions":[{"scenario":"scenario id or custom","custom":"situation text if custom, else omit","goal":"specific thing to practice, one short sentence","why":"which weak spot or target it serves"}],
  "drills":["2-3 short habits outside the app, e.g. shadow a tutor line 5x, label things around the house"],
  "milestone":"what finishing this block should get them, tied to the level targets"}`,
-      [{role:"user",content:ctx}], 1400));
+      [{role:"user",content:ctx}], 2500);
     if(!Array.isArray(d.sessions)||!d.sessions.length) throw new Error("Plan came back empty");
     d.sessions=d.sessions.slice(0,7).map(s=>({...s, scenario:SCENARIOS.some(x=>x.id===s.scenario)?s.scenario:"custom", done:false}));
     P.plan={...d, created:Date.now(), level:S.level}; saveP();
