@@ -66,6 +66,9 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 .fb .line .tx{flex:1;font-size:16px}
 .fb ul{margin:6px 0 0;padding-left:18px;color:#c9d6de}
 .fb .ok{color:var(--good)}
+.fb .tr{display:none;font-size:14px;color:var(--muted);margin-top:3px}
+.fb .line.showtr .tr{display:block}
+.play.entog{font-size:11px;font-weight:700}.play.entog.on{background:var(--accent);color:#04241c}
 .play{flex:none;width:32px;height:32px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-size:13px}
 .typing{align-self:flex-start;color:var(--muted);font-size:14px;padding:4px 6px}
 /* bottom bar */
@@ -258,7 +261,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const RECOG_LOCALE = "es-MX";
-const APP_VERSION = "8 (reliable reviews, fixed)";
+const APP_VERSION = "9 (translations on corrections)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -412,7 +415,9 @@ Respond ONLY with one JSON object, no markdown, no code fences:
  "reply_en": "English translation of reply",
  "correction": null OR {
     "corrected": "the learner's sentence with grammar, agreement, verb, or word-choice errors fixed (minimal changes)",
+    "corrected_en": "English translation of corrected",
     "natural": "how a native speaker from ${reg} would most naturally say the same thing (omit or repeat corrected if identical)",
+    "natural_en": "English translation of natural",
     "notes": ["one short English explanation per fix"]
  },
  "pronunciation": [{"word":"word from their speech","tip":"short, concrete English tip on the specific sound(s), e.g. tap the single r, keep the vowel pure, soft d between vowels"}],
@@ -421,7 +426,7 @@ Respond ONLY with one JSON object, no markdown, no code fences:
 Rules:
 - "correction" is null only if the learner's sentence was correct AND natural. Ignore missing punctuation, capitalization, and accents in transcripts (those come from the recognizer).
 - "pronunciation": only words scored below 75, at most 3, most important first. Empty array for typed turns or if all words scored 75+.
-- Notes and tips in English; reply, corrected, natural, hint in Spanish.
+- Notes, tips, corrected_en and natural_en in English; reply, corrected, natural, hint in Spanish.
 - If the learner writes or speaks in English, help them say it in Spanish via "correction" and continue in character.${profileForPrompt()}`;
 }
 
@@ -590,9 +595,10 @@ function addFeedback(turn, d){
   }
   const c=d.correction;
   if(c&&c.corrected){
-    h+=`<div class="lbl">Corrected</div><div class="line"><div class="tx">${esc(c.corrected)}</div><button class="play" data-say="${esc(c.corrected)}">▶︎</button></div>`;
+    const line=(es,en)=>`<div class="line"><div class="tx">${esc(es)}${en?`<div class="tr">${esc(en)}</div>`:""}</div>${en?`<button class="play entog" data-en="1">EN</button>`:""}<button class="play" data-say="${esc(es)}">▶︎</button></div>`;
+    h+=`<div class="lbl">Corrected</div>`+line(c.corrected,c.corrected_en);
     if(c.natural&&c.natural.trim()!==c.corrected.trim())
-      h+=`<div class="lbl">More natural</div><div class="line"><div class="tx">${esc(c.natural)}</div><button class="play" data-say="${esc(c.natural)}">▶︎</button></div>`;
+      h+=`<div class="lbl">More natural</div>`+line(c.natural,c.natural_en);
     if(c.notes&&c.notes.length) h+=`<ul>${c.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`;
   } else h+=`<div class="ok">✓ Sentence was correct and natural</div>`;
   if(d.pronunciation&&d.pronunciation.length){
@@ -600,7 +606,10 @@ function addFeedback(turn, d){
       `<div class="line"><div class="tx" style="font-size:14.5px"><b>${esc(p.word)}</b>: ${esc(p.tip)}</div><button class="play" data-say="${esc(p.word)}" data-rate="-30%">▶︎</button></div>`).join("");
   }
   el.innerHTML=h;
-  el.addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say, b.dataset.rate||"-15%"); });
+  el.addEventListener("click",e=>{
+    const t=e.target.closest("[data-en]"); if(t){ const ln=t.closest(".line"); ln.classList.toggle("showtr"); t.classList.toggle("on"); return; }
+    const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say, b.dataset.rate||"-15%");
+  });
   $("#chat").appendChild(el); scrollDown();
 }
 function scrollDown(){ const s=$("#chatScroll"); requestAnimationFrame(()=>s.scrollTop=s.scrollHeight); }
