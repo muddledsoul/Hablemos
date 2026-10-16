@@ -113,6 +113,7 @@ header h1{font-size:19px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text
 .banner{background:#2a2410;border:1px solid var(--ok);border-radius:12px;padding:12px;margin-bottom:12px;font-size:14.5px}
 .goal{align-self:stretch;background:#173a33;border:1px solid var(--accent2);border-radius:12px;padding:10px 12px;font-size:14px}
 svg.trend text{fill:var(--muted);font-size:10px}
+.usage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:14px}
 /* vocab */
 .vocabBtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:6px 0 4px}
 .vcard{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 20px}
@@ -205,6 +206,9 @@ svg.trend text{fill:var(--muted);font-size:10px}
       <option value="claude-sonnet-5-5">Sonnet 5.5 (best feedback)</option>
       <option value="claude-haiku-5-5">Haiku 5.5 (faster, cheaper)</option>
     </select>
+    <label>Monthly Claude budget (USD)</label><input id="budget" type="number" inputmode="decimal" min="0" step="1" placeholder="10">
+    <p class="note" style="margin-top:6px">Set this to the spend limit you set in the Claude Console. The app warns you at 80%.</p>
+    <label>This month's usage</label><div id="usageBox"></div>
     <label>Auto-play tutor replies</label>
     <div class="seg" id="autoplaySeg"><button data-v="1">On</button><button data-v="0">Off</button></div>
     <p class="note">Pronunciation is graded against Mexican Spanish (es-MX). That is the only Latin American accent Azure's assessor supports, and it's a solid neutral reference for Colombia and Central America too.</p>
@@ -309,7 +313,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "11 (vocabulary flashcards)";
+const APP_VERSION = "12 (usage & budget)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -350,7 +354,7 @@ const LEVELS = {
 
 /* ---------- settings ---------- */
 const DEFAULTS = {azKey:"",azRegion:"eastus",clKey:"",model:"claude-sonnet-5-5",autoplay:"1",
-  scenario:"cafe",level:"beginner",country:"MX",gender:"F",speed:"-15%",custom:""};
+  scenario:"cafe",level:"beginner",country:"MX",gender:"F",speed:"-15%",custom:"",budget:"10"};
 let S = load();
 function load(){ try{ return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem("hablemos.v1")||"{}")); }catch(e){ return {...DEFAULTS}; } }
 function save(){ try{ localStorage.setItem("hablemos.v1", JSON.stringify(S)); }catch(e){} }
@@ -392,7 +396,7 @@ function synth(text, rate){
       s.close();
       if(r.reason===sdk.ResultReason.SynthesizingAudioCompleted){
         const url=URL.createObjectURL(new Blob([r.audioData],{type:"audio/mpeg"}));
-        ttsCache.set(key,url); res(url);
+        ttsCache.set(key,url); trackAzure("ttsChars",text.length); res(url);
       } else rej(new Error(r.errorDetails||"Speech synthesis failed"));
     }, e=>{ s.close(); rej(new Error(String(e))); });
   });
@@ -405,6 +409,40 @@ async function say(text, rate){
 }
 
 /* ---------- Claude ---------- */
+/* ---------- usage & cost tracking (estimated, this app only) ---------- */
+// USD per million tokens [input, output], from Anthropic's pricing page.
+const PRICES={"claude-sonnet-5-5":[2,10],"claude-haiku-5-5":[0.10,0.50]};
+const AZ_FREE={sttSec:5*3600, ttsChars:500000}; // Azure Speech F0 monthly free tier
+const UKEY="hablemos.usage.v1";
+let U=(()=>{ try{ return JSON.parse(localStorage.getItem(UKEY)||"{}")||{}; }catch(e){ return {}; } })();
+const monthKey=()=>dayKey().slice(0,7);
+function um(){ const k=monthKey(); return U[k]=U[k]||{usd:0,calls:0,inTok:0,outTok:0,sttSec:0,ttsChars:0}; }
+function saveU(){ try{ localStorage.setItem(UKEY,JSON.stringify(U)); }catch(e){} }
+function trackClaude(j){
+  const u=j&&j.usage; if(!u) return;
+  const [pi,po]=PRICES[S.model]||PRICES["claude-sonnet-5-5"];
+  const inTok=(u.input_tokens||0)+(u.cache_creation_input_tokens||0)*1.25+(u.cache_read_input_tokens||0)*0.1;
+  const m=um(); m.calls++; m.inTok+=u.input_tokens||0; m.outTok+=u.output_tokens||0;
+  m.usd+=inTok*pi/1e6+(u.output_tokens||0)*po/1e6; saveU(); budgetWarn();
+}
+function trackAzure(kind,amt){ const m=um(); m[kind]+=amt; saveU(); }
+let warned80=false;
+function budgetWarn(){
+  const b=parseFloat(S.budget)||0; if(!b||warned80) return;
+  if(um().usd>=b*0.8){ warned80=true; toast(`Heads up: about ${Math.round(100*um().usd/b)}% of your $${b} monthly Claude budget used (estimate)`,5000); }
+}
+function usageHTML(){
+  const m=um(), b=parseFloat(S.budget)||0, pct=b?Math.min(100,Math.round(100*m.usd/b)):null;
+  const stt=Math.round(100*m.sttSec/AZ_FREE.sttSec), tts=Math.round(100*m.ttsChars/AZ_FREE.ttsChars);
+  const bar=v=>`<div class="meter" style="margin:4px 0 10px"><i style="width:${Math.min(100,v)}%;${v>=90?"background:var(--bad)":v>=75?"background:var(--ok)":""}"></i></div>`;
+  const mon=new Date().toLocaleDateString(undefined,{month:"long"});
+  return `<div class="usage"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Claude (${mon})</b><span><b>$${m.usd.toFixed(2)}</b>${b?` of $${b} · ${pct}%`:""}</span></div>
+    ${b?bar(pct):"<div style='height:8px'></div>"}
+    <div style="display:flex;justify-content:space-between"><b>Azure speech, free tier</b><span>${Math.round(m.sttSec/60)} of 300 min · ${stt}%</span></div>${bar(stt)}
+    <div style="display:flex;justify-content:space-between"><b>Azure voice, free tier</b><span>${(m.ttsChars/1000).toFixed(1)}k of 500k chars · ${tts}%</span></div>${bar(tts)}
+    <div class="note" style="margin:0">${m.calls} Claude requests this month. Estimated from this app's own usage on this phone; your exact bill is at platform.claude.com → Billing. Resets on the 1st.</div></div>`;
+}
+
 async function claude(system, messages, maxTokens=1200){
   const r=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
@@ -413,7 +451,7 @@ async function claude(system, messages, maxTokens=1200){
     body:JSON.stringify({model:S.model,max_tokens:maxTokens,system,messages})
   });
   if(!r.ok){ let t=await r.text(); throw new Error("Claude "+r.status+": "+t.slice(0,240)); }
-  const j=await r.json();
+  const j=await r.json(); trackClaude(j);
   return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
 }
 // Ask Claude for a JSON object (plain text request; works on every model).
@@ -429,7 +467,7 @@ async function claudeJSON(system, messages, maxTokens=1500){
       body:JSON.stringify({model:S.model, max_tokens:maxTokens, system, messages:msgs})
     });
     if(!r.ok){ const t=await r.text(); throw new Error("Claude "+r.status+": "+t.slice(0,240)); }
-    const j=await r.json();
+    const j=await r.json(); trackClaude(j);
     const txt=(j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     if(j.stop_reason==="max_tokens"){ last="reply was cut off"; maxTokens=Math.min(maxTokens*2,8000); continue; }
     try{ return parseJSON(txt); }
@@ -553,7 +591,7 @@ function readiness(level=S.level){
 }
 
 /* ---------- speech recognition + pronunciation assessment ---------- */
-let rec=null, audioCfg=null, segs=[], recording=false, recText="";
+let rec=null, audioCfg=null, segs=[], recording=false, recText="", recStarted=0;
 // opts: {locale, ref (reference text for scripted practice), assess (bool), live (element)}
 function startRec(opts={}){
   const sdk=window.SpeechSDK; const cfg=speechConfig();
@@ -568,7 +606,7 @@ function startRec(opts={}){
               sdk.PronunciationAssessmentGranularity.Phoneme, !!opts.ref);
     pa.applyTo(rec);
   }
-  segs=[]; recText=""; let finalText="";
+  segs=[]; recText=""; let finalText=""; recStarted=Date.now();
   rec.recognizing=(s,e)=>{ live.textContent=(finalText+" "+e.result.text).trim(); };
   rec.recognized=(s,e)=>{
     if(e.result.reason===sdk.ResultReason.RecognizedSpeech){
@@ -582,6 +620,7 @@ function startRec(opts={}){
 function stopRec(abort){
   return new Promise(res=>{
     const r=rec; rec=null;
+    if(r&&recStarted){ trackAzure("sttSec",(Date.now()-recStarted)/1000); recStarted=0; }
     const done=()=>{ try{ r&&r.close(); }catch(e){} try{ audioCfg&&audioCfg.close(); }catch(e){} audioCfg=null; res(); };
     if(!r) return res();
     if(abort) return done();
@@ -921,10 +960,11 @@ async function practiceTap(){
 let settingsFrom="s-home";
 function openSettings(){
   $("#azKey").value=S.azKey; $("#azRegion").value=S.azRegion; $("#clKey").value=S.clKey; $("#model").value=S.model;
+  $("#budget").value=S.budget||""; $("#usageBox").innerHTML=usageHTML();
   $("#testOut").textContent=""; show("s-settings");
 }
 function readSettings(){
-  S.azKey=$("#azKey").value.trim(); S.azRegion=$("#azRegion").value.trim().toLowerCase(); S.clKey=$("#clKey").value.trim(); S.model=$("#model").value; save();
+  S.azKey=$("#azKey").value.trim(); S.azRegion=$("#azRegion").value.trim().toLowerCase(); S.clKey=$("#clKey").value.trim(); S.model=$("#model").value; S.budget=$("#budget").value.trim(); warned80=false; save();
 }
 $("#saveSettings").onclick=()=>{ readSettings(); if(needKeys()){ toast("All three fields are required"); return; } toast("Saved"); show("s-home"); };
 $("#setClose").onclick=()=>{ if(needKeys()){ toast("Add your keys to continue"); return; } show("s-home"); };
@@ -1064,6 +1104,7 @@ function renderProgress(){
   if(tw.length) h+=`<div class="sec"><h3>Tricky words</h3><div class="chips">${tw.map(w=>`<button class="chip" data-say="${esc(w)}" data-rate="-30%">▶︎ ${esc(w)}</button>`).join("")}</div><p class="note">They drop off as you say them well.</p></div>`;
   if(P.phrases.length) h+=`<div class="sec"><details><summary style="font-weight:700">Phrase bank (${P.phrases.length})</summary>${P.phrases.slice().reverse().map(p=>`<div class="line" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><div class="tx" style="flex:1">${tapWords(p.es)}<div class="note" style="margin:0">${esc(p.en)}</div></div><button class="play" data-say="${esc(p.es)}">▶︎</button></div>`).join("")}</details></div>`;
   if(P.sessions.length) h+=`<div class="sec"><details><summary style="font-weight:700">Session history</summary>${P.sessions.slice().reverse().map(s=>`<div class="hist"><b>${new Date(s.date).toLocaleDateString()}</b> · ${esc(s.scenario)} · ${cap(s.level)}<br><span class="note">${s.turns} turns · pron ${s.avgPron??"–"} · ${s.correctPct}% correct · ${s.minutes}m</span>${s.summary?`<div class="note" style="margin-top:4px">${esc(s.summary)}</div>`:""}</div>`).join("")}</details></div>`;
+  h+=`<div class="sec"><h3>Cost this month</h3>${usageHTML()}</div>`;
   h+=`<div class="sec"><h3>Backup</h3><p class="note" style="margin-top:0">Progress is saved on this phone. Deleting the home-screen icon erases it, so export a backup now and then.</p>
     <div class="row"><button class="btn ghost" id="exportP">Export</button><button class="btn ghost" id="importP">Import</button></div><input type="file" id="importFile" accept="application/json,.json" style="display:none"></div>`;
   $("#progBody").innerHTML=h;
@@ -1312,7 +1353,8 @@ function listenOnce(){
     if(sdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs!==undefined) cfg.setProperty(sdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,"6000");
     const ac=sdk.AudioConfig.fromDefaultMicrophoneInput(); const r=new sdk.SpeechRecognizer(cfg,ac);
     new sdk.PronunciationAssessmentConfig("",sdk.PronunciationAssessmentGradingSystem.HundredMark,sdk.PronunciationAssessmentGranularity.Phoneme,false).applyTo(r);
-    const fin=()=>{ try{r.close();}catch(e){} try{ac.close();}catch(e){} };
+    const t0=Date.now();
+    const fin=()=>{ trackAzure("sttSec",(Date.now()-t0)/1000); try{r.close();}catch(e){} try{ac.close();}catch(e){} };
     r.recognizeOnceAsync(result=>{
       let j=null; try{ j=JSON.parse(result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult)); }catch(e){}
       fin(); res(result.reason===sdk.ResultReason.RecognizedSpeech&&j?aggregate([j]):{text:"",words:[],pron:null});
