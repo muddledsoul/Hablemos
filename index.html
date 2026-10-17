@@ -416,7 +416,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "24 (where is it?)";
+const APP_VERSION = "25 (sprint shows answers)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -2289,9 +2289,13 @@ function renderSprint(){
     const want=isSer(it[1])?"SER":"ESTAR", right=b.dataset.v===want;
     g.queue.shift();
     if(right){ g.streak++; g.best=Math.max(g.best,g.streak); g.right++; const mult=1+Math.floor(g.streak/5); g.score+=10*mult; chime(true);
-      $("#sMsg").innerHTML=`<div class="ok" style="text-align:center">+${10*mult}${mult>1?` (x${mult} streak!)`:""}</div>`; setTimeout(()=>{ if(game===g) renderSprint(); },250); }
+      // show the completed sentence with the correct form filled in before moving on
+      $("#gameBody").querySelector(".gq").innerHTML=fillBlank(it[0],it[1],"okc");
+      $("#sMsg").innerHTML=`<div class="ok" style="text-align:center">+${10*mult}${mult>1?` (x${mult} streak!)`:""}</div>`; g.lock=true;
+      setTimeout(()=>{ g.lock=false; if(game===g&&Date.now()<g.end) renderSprint(); },750); }
     else { g.streak=0; g.wrong++; chime(false); g.lock=true;
-      $("#sMsg").innerHTML=`<div class="gq" style="font-size:17px">${fillBlank(it[0],it[1],"okc")}</div>${ruleBox(it[3])}`;
+      $("#gameBody").querySelector(".gq").innerHTML=fillBlank(it[0],it[1],"okc");
+      $("#sMsg").innerHTML=ruleBox(it[3]);
       setTimeout(()=>{ g.lock=false; if(game===g&&Date.now()<g.end) renderSprint(); },1800); }
   });
 }
