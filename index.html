@@ -385,7 +385,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "17 (faster Find it)";
+const APP_VERSION = "18 (Name it: continuous mic)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -1535,7 +1535,7 @@ $("#setBody").addEventListener("click",e=>{
   if(md==="say") startDeck(curSetId); else if(md==="find") startScene(SET_SCENE[curSetId]||"home", curSetId); else if(md==="name") startName(SET_SCENE[curSetId]||"home", curSetId); else if(md==="learn") startLearn(); else if(md==="quiz") startQuiz(); else startMatch();
 });
 $("#setBack").onclick=openVocab;
-$("#gameBack").onclick=()=>{ if(game&&game.timer) clearInterval(game.timer); const back=game&&game.back; game=null; if(back) back(); else openSet(curSetId); };
+$("#gameBack").onclick=()=>{ if(game&&game.timer) clearInterval(game.timer); if(game&&game.kind==="name"){ clearInterval(game.tick); clearTimeout(game.noHear); stopNameStream(); } const back=game&&game.back; game=null; if(back) back(); else openSet(curSetId); };
 const fmtTime=s=>s<60?s+"s":Math.floor(s/60)+"m "+String(s%60).padStart(2,"0")+"s";
 function gameShell(title,sub){ $("#gameTitle").textContent=title; $("#gameSub").textContent=sub||""; show("s-game"); }
 function gbody(h){ $("#gameBody").innerHTML=h; }
@@ -1931,43 +1931,78 @@ function sceneHTML(g,hi){
   return `<div class="scene" id="sceneBox">${g.svg}${g.items.map((it,k)=>{ const p=g.pos[k];
     return `<div class="sit${k===hi?" target":""}" style="left:${p.x/3}%;top:${p.y/4}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch sc" style="background:${it[0]}"></span>`:it[0]}${k===hi?`<span class="pointer">👇</span>`:""}</div>`; }).join("")}</div>`;
 }
+// One continuous mic stream for the whole round. iOS only opens the mic reliably right
+// after a tap, so it is started by the Start button and kept open between items.
+let nameRec=null, nameAc=null, nameT0=0;
+function startNameStream(onFinal,onPartial){
+  const sdk=window.SpeechSDK; const cfg=speechConfig();
+  cfg.speechRecognitionLanguage=RECOG_LOCALE; cfg.outputFormat=sdk.OutputFormat.Detailed;
+  cfg.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs,"600");
+  nameAc=sdk.AudioConfig.fromDefaultMicrophoneInput(); nameRec=new sdk.SpeechRecognizer(cfg,nameAc);
+  new sdk.PronunciationAssessmentConfig("",sdk.PronunciationAssessmentGradingSystem.HundredMark,sdk.PronunciationAssessmentGranularity.Phoneme,false).applyTo(nameRec);
+  nameRec.recognizing=(s,e)=>onPartial(e.result.text);
+  nameRec.recognized=(s,e)=>{
+    if(e.result.reason!==sdk.ResultReason.RecognizedSpeech) return;
+    let j=null; try{ j=JSON.parse(e.result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult)); }catch(err){}
+    if(j) onFinal(aggregate([j]));
+  };
+  nameRec.canceled=(s,e)=>{ if(e.reason===sdk.CancellationReason.Error){ toast("Mic/Azure error: "+e.errorDetails,5000); stopNameStream(); } };
+  nameT0=Date.now();
+  nameRec.startContinuousRecognitionAsync(()=>{}, err=>{ toast("Couldn't start mic: "+err,5000); stopNameStream(); });
+}
+function stopNameStream(){
+  if(nameT0){ trackAzure("sttSec",(Date.now()-nameT0)/1000); nameT0=0; }
+  const r=nameRec, a=nameAc; nameRec=null; nameAc=null;
+  if(r) r.stopContinuousRecognitionAsync(()=>{ try{r.close();}catch(e){} try{a&&a.close();}catch(e){} }, ()=>{ try{r.close();}catch(e){} });
+}
 async function renderName(){
   const g=game;
   if(!g.started){
     gbody(`<div class="helper"><span class="hav">${g.sc.helper}</span><div class="bubble"><div class="hn">${esc(g.sc.name)}</div><div class="ht">¿Cómo se llama? Say each item as fast as you can!</div></div></div>
-      <div class="note" style="margin:10px 0">${g.targets.length} items. Each one lights up and the mic opens by itself. Score per item: accuracy 50 + pronunciation 30 + speed 20 (full speed bonus under ~1.5s).</div>
+      <div class="note" style="margin:10px 0">${g.targets.length} items. Tap Start once and the mic stays on for the whole round. Each item lights up, just say it. Score per item: accuracy 50 + pronunciation 30 + speed 20 (full speed bonus under ~1.5s).</div>
       ${sceneHTML(g,-1)}<div style="height:12px"></div><button class="btn" id="nStart">Start ▶︎</button>`);
-    $("#nStart").onclick=()=>{ g.started=true; unlockAudio(); renderName(); };
+    $("#nStart").onclick=()=>{
+      unlockAudio(); $("#player").pause(); sayTok++;
+      try{ startNameStream(r=>nameHeard(g,r), txt=>{ if(game===g&&g.awaiting&&$("#nStatus")) $("#nStatus").textContent="🎤 "+txt; }); }
+      catch(e){ toast(e.message,4000); return; }
+      g.started=true; renderName();
+    };
     return;
   }
-  if(g.t>=g.targets.length) return endName();
+  if(g.t>=g.targets.length){ stopNameStream(); return endName(); }
   const c=g.targets[g.t], k=g.items.indexOf(c);
   const tot=g.results.reduce((a,r)=>a+r.s.total,0);
   $("#gameSub").textContent=`Item ${g.t+1} of ${g.targets.length} · ${tot} pts`;
   gbody(`${sceneHTML(g,k)}
     <div class="namebar"><div class="timer" id="nTimer">0.0s</div><div id="nStatus" class="note" style="margin:0">🎤 Listening… say it!</div></div>
     <div id="nRes" class="vres" style="text-align:center"></div>`);
-  const t0=performance.now(); let live=true;
-  const tick=setInterval(()=>{ if(!live||!$("#nTimer")) return clearInterval(tick); $("#nTimer").textContent=((performance.now()-t0)/1000).toFixed(1)+"s"; },100);
-  let r=null; try{ r=await listenOnce(); }catch(e){ toast("Mic error: "+e.message,4000); }
-  live=false; clearInterval(tick);
-  if(game!==g) return;
-  // Subtract the recognizer's end-of-speech wait so the clock reflects when you finished talking.
-  const secs=Math.max(0,(performance.now()-t0)/1000-0.8);
-  if(!r||!r.text){
+  armName(g);
+}
+function armName(g){
+  const t0=performance.now(); g.awaiting={c:g.targets[g.t], t0};
+  clearInterval(g.tick); clearTimeout(g.noHear);
+  g.tick=setInterval(()=>{ if(!g.awaiting||!$("#nTimer")) return clearInterval(g.tick); $("#nTimer").textContent=((performance.now()-t0)/1000).toFixed(1)+"s"; },100);
+  g.noHear=setTimeout(()=>{
+    if(game!==g||!g.awaiting||g.awaiting.t0!==t0) return;
+    g.awaiting=null; clearInterval(g.tick);
     $("#nStatus").textContent="Didn't hear anything.";
     $("#nRes").innerHTML=`<button class="btn ghost" id="nRetry">🎤 Try this one again</button><div style="height:8px"></div><button class="btn ghost" id="nSkip">Skip (0 pts)</button>`;
-    $("#nRetry").onclick=()=>renderName();
-    $("#nSkip").onclick=()=>{ g.results.push({c,ok:false,heard:"",pron:null,secs:null,s:nameScore(false)}); say(c[1],"-10%"); g.t++; renderName(); };
-    return;
-  }
+    $("#nRetry").onclick=()=>{ $("#nRes").innerHTML=""; $("#nStatus").textContent="🎤 Listening… say it!"; if(!nameRec){ try{ startNameStream(r=>nameHeard(g,r), txt=>{ if(game===g&&g.awaiting&&$("#nStatus")) $("#nStatus").textContent="🎤 "+txt; }); }catch(e){} } armName(g); };
+    $("#nSkip").onclick=()=>{ const c=g.targets[g.t]; g.results.push({c,ok:false,heard:"",pron:null,secs:null,s:nameScore(false)}); g.t++; renderName(); };
+  },9000);
+}
+function nameHeard(g,r){
+  if(game!==g||!g.awaiting||!r.text) return;
+  const {c,t0}=g.awaiting; g.awaiting=null; clearInterval(g.tick); clearTimeout(g.noHear);
+  // Subtract the end-of-speech pause the recognizer waits for, so the clock reflects when you finished talking.
+  const secs=Math.max(0,(performance.now()-t0)/1000-0.6);
   const ok=vocabMatch(c,r.text), s=nameScore(ok,r.pron,secs);
   g.results.push({c,ok,heard:r.text,pron:r.pron,secs,s});
   $("#nTimer").textContent=secs.toFixed(1)+"s";
   $("#nStatus").innerHTML=ok?`<span class="ok">✓ ${esc(c[1])}</span>`:`<span class="err">✗ Heard "${esc(r.text)}". It's <b>${esc(c[1])}</b></span>`;
   $("#nRes").innerHTML=`<div class="chips" style="justify-content:center"><span class="pill ${ok?"g":"b"}">Accuracy ${s.acc}/50</span><span class="pill ${cls(r.pron??0)}">Pronunciation ${s.pr}/30</span><span class="pill ${s.sp>=14?"g":s.sp>=7?"o":"b"}">Speed ${s.sp}/20</span></div><div style="font-size:22px;font-weight:700;margin-top:6px">+${s.total}</div>`;
-  if(!ok) say(c[1],"-10%");
-  setTimeout(()=>{ if(game===g){ g.t++; renderName(); } }, ok?1600:2600);
+  if(ok) chime(true); else { chime(false); say(c[1],"-10%"); }
+  setTimeout(()=>{ if(game===g){ g.t++; renderName(); } }, ok?1100:2600);
 }
 function endName(){
   const g=game, R=g.results, n=R.length, max=n*100;
@@ -2002,6 +2037,8 @@ renderToday();
 if(needKeys()) openSettings(); else show("s-home");
 // Pick up new versions right away: check for an updated service worker on every launch
 // and when the app comes back to the foreground; reload once when a new one takes over.
+// Leaving the app closes the mic; the item then offers "Try this one again" (a tap reopens it).
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"&&nameRec) stopNameStream(); });
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
     reg.update().catch(()=>{});
