@@ -292,6 +292,11 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
     <label>Monthly Claude budget (USD)</label><input id="budget" type="number" inputmode="decimal" min="0" step="1" placeholder="10">
     <p class="note" style="margin-top:6px">Set this to the spend limit you set in the Claude Console. The app warns you at 80%.</p>
     <label>This month's usage</label><div id="usageBox"></div>
+    <label>Sound effects (right / wrong chimes)</label>
+    <div class="seg" id="sfxSeg"><button data-v="1">On</button><button data-v="0">Off</button></div>
+    <label>Mute all sounds (voice too)</label>
+    <div class="seg" id="muteSeg"><button data-v="0">Sound on</button><button data-v="1">Mute all</button></div>
+    <p class="note" style="margin-top:6px">The 🔊 button at the top of every game toggles Mute all.</p>
     <label>Auto-play tutor replies</label>
     <div class="seg" id="autoplaySeg"><button data-v="1">On</button><button data-v="0">Off</button></div>
     <p class="note">Pronunciation is graded against Mexican Spanish (es-MX). That is the only Latin American accent Azure's assessor supports, and it's a solid neutral reference for Colombia and Central America too.</p>
@@ -374,7 +379,7 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
 
 <!-- VOCAB GAME (learn / quiz / match) -->
 <section id="s-game" class="screen">
-  <header><button class="iconbtn" id="gameBack" aria-label="Back">‹</button><h1 id="gameTitle">Game</h1></header>
+  <header><button class="iconbtn" id="gameBack" aria-label="Back">‹</button><h1 id="gameTitle">Game</h1><button class="iconbtn" id="gameMute" aria-label="Mute">🔊</button></header>
   <div style="padding:8px 16px 0"><div class="note" id="gameSub" style="margin:0;text-align:center"></div></div>
   <div class="scroll" id="gameBody"></div>
 </section>
@@ -457,7 +462,7 @@ const LEVELS = {
 
 /* ---------- settings ---------- */
 const DEFAULTS = {azKey:"",azRegion:"eastus",clKey:"",model:"claude-sonnet-5-5",autoplay:"1",
-  scenario:"cafe",level:"beginner",country:"MX",gender:"F",speed:"-15%",custom:"",budget:"10"};
+  scenario:"cafe",level:"beginner",country:"MX",gender:"F",speed:"-15%",custom:"",budget:"10",sfx:"1",muteAll:"0"};
 let S = load();
 function load(){ try{ return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem("hablemos.v1")||"{}")); }catch(e){ return {...DEFAULTS}; } }
 function save(){ try{ localStorage.setItem("hablemos.v1", JSON.stringify(S)); }catch(e){} }
@@ -476,6 +481,7 @@ function needKeys(){ return !S.azKey || !S.azRegion || !S.clKey; }
 let unlocked=false;
 function unlockAudio(){
   if(unlocked) return; unlocked=true;
+  try{ sfxInit(); for(const a of Object.values(SFX)){ a.muted=true; a.play().then(()=>{ a.pause(); a.currentTime=0; a.muted=false; }).catch(()=>{ a.muted=false; }); } }catch(e){}
   const p=$("#player");
   p.src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
   p.play().catch(()=>{});
@@ -509,6 +515,7 @@ function synth(text, rate){
 let sayTok=0;
 async function say(text, rate){
   const my=++sayTok;
+  if(S.muteAll==="1") return;
   try{
     const url=await synth(text, rate ?? S.speed);
     if(my!==sayTok) return;
@@ -516,19 +523,35 @@ async function say(text, rate){
   }catch(e){ if(my===sayTok) toast("Voice error: "+e.message, 4000); }
 }
 function prefetch(text, rate){ synth(text, rate ?? S.speed).catch(()=>{}); }
-// Short local chime (no network): right = rising two notes, wrong = low buzz.
-let actx=null;
+// Sound effects are short WAVs generated in code and played through <audio> elements, which keep
+// playing when the iPhone's ring/silent switch is on silent (Web Audio is muted by that switch).
+function makeWav(notes, wave){
+  const sr=22050, dur=Math.max(...notes.map(n=>n[1]+n[2]))+0.05, N=Math.floor(sr*dur), d=new Int16Array(N);
+  for(const [f,start,len,vol] of notes){
+    const s0=Math.floor(start*sr), n=Math.floor(len*sr);
+    for(let i=0;i<n&&s0+i<N;i++){
+      const t=i/sr, env=Math.min(1,i/(sr*0.008))*Math.exp(-4*t/len);
+      const ph=2*Math.PI*f*t, v=wave==="sq"?(Math.sin(ph)>0?1:-1)*0.5:Math.sin(ph);
+      d[s0+i]=Math.max(-32767,Math.min(32767,d[s0+i]+v*env*vol*32767));
+    }
+  }
+  const buf=new ArrayBuffer(44+N*2), v=new DataView(buf), w=(o,s)=>[...s].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+  w(0,"RIFF"); v.setUint32(4,36+N*2,true); w(8,"WAVE"); w(12,"fmt "); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,"data"); v.setUint32(40,N*2,true);
+  new Int16Array(buf,44).set(d);
+  return URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
+}
+const SFX={};
+function sfxInit(){
+  if(SFX.ok) return;
+  SFX.ok=new Audio(makeWav([[659,0,0.12,0.35],[988,0.09,0.22,0.35]]));
+  SFX.bad=new Audio(makeWav([[196,0,0.28,0.30],[185,0.02,0.26,0.20]],"sq"));
+  for(const a of Object.values(SFX)){ a.preload="auto"; a.setAttribute("playsinline",""); }
+}
+const sfxOn=()=>S.sfx!=="0"&&S.muteAll!=="1";
 function chime(ok){
-  try{
-    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
-    const t=actx.currentTime;
-    (ok?[[660,0],[990,.09]]:[[180,0]]).forEach(([f,d])=>{
-      const o=actx.createOscillator(), g=actx.createGain();
-      o.type=ok?"sine":"square"; o.frequency.value=f; o.connect(g); g.connect(actx.destination);
-      g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(ok?0.25:0.08,t+d+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+d+(ok?0.18:0.22));
-      o.start(t+d); o.stop(t+d+0.25);
-    });
-  }catch(e){}
+  if(!sfxOn()) return;
+  try{ sfxInit(); const a=ok?SFX.ok:SFX.bad; a.currentTime=0; a.play().catch(()=>{}); }catch(e){}
 }
 
 /* ---------- Claude ---------- */
@@ -1098,7 +1121,14 @@ $("#testKeys").onclick=async()=>{
   try{ await claude("Reply with the single word: ok",[{role:"user",content:"ping"}],10); msg.push("✓ Claude OK"); }catch(e){ msg.push("✗ "+e.message); }
   out.textContent=msg.join("  ·  ");
 };
-seg("#autoplaySeg","autoplay");
+seg("#autoplaySeg","autoplay"); seg("#sfxSeg","sfx"); seg("#muteSeg","muteAll",paintMute);
+function paintMute(){
+  const m=S.muteAll==="1"; const b=$("#gameMute"); if(b){ b.textContent=m?"🔇":"🔊"; b.setAttribute("aria-label",m?"Unmute":"Mute"); }
+  document.querySelectorAll("#muteSeg button").forEach(x=>x.classList.toggle("sel",x.dataset.v===S.muteAll));
+  if(m){ $("#player").pause(); sayTok++; }
+}
+$("#gameMute").onclick=()=>{ S.muteAll=S.muteAll==="1"?"0":"1"; save(); paintMute(); toast(S.muteAll==="1"?"Muted":"Sound on"); };
+paintMute();
 
 /* ---------- home ---------- */
 function renderScenarios(){
