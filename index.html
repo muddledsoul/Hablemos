@@ -130,6 +130,49 @@ svg.trend text{fill:var(--muted);font-size:10px}
 #vMic{width:76px;height:76px;border-radius:50%;background:var(--accent);display:grid;place-items:center;margin:0 auto}
 #vMic svg{width:32px;height:32px;fill:#04241c}
 #vMic.rec{background:var(--bad);animation:pulse 1.4s infinite}#vMic.rec svg{fill:#fff}
+.mode{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.mode .mi{font-size:30px}
+.opts{display:grid;gap:10px}
+.opt{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:14px;font-size:18px;font-weight:600;text-align:center;transition:background .15s}
+.opt.right{background:#173a2a;border-color:var(--good)}.opt.wrong{background:#3a1717;border-color:var(--bad)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt.pic{padding:10px;display:grid;place-items:center;min-height:120px}
+.vpic{font-size:64px;line-height:1.1}.vpic.sm{font-size:20px;vertical-align:middle}
+.swatch{display:inline-block;width:80px;height:80px;border-radius:50%;border:2px solid var(--line)}.swatch.sm{width:18px;height:18px;vertical-align:middle;border-width:1px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mcol{display:grid;gap:8px;align-content:start}
+.mt{background:var(--panel);border:2px solid var(--line);border-radius:12px;min-height:64px;padding:6px;font-size:15.5px;font-weight:600;display:grid;place-items:center;transition:opacity .3s,transform .15s}
+.mt.pic .vpic{font-size:40px}.mt.pic .swatch{width:42px;height:42px}
+.mt.sel{border-color:var(--accent);background:#173a33;transform:scale(1.03)}
+.mt.done{opacity:.18;border-color:var(--good);pointer-events:none}
+.mt.bad{border-color:var(--bad);background:#3a1717;animation:shake .35s}
+.helper{display:flex;gap:10px;align-items:flex-start}
+.hav{font-size:44px;line-height:1}
+.bubble{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:14px;border-top-left-radius:4px;padding:10px 12px}
+.bubble .hn{font-size:12px;color:var(--accent);font-weight:700}.bubble .ht{font-size:18px;font-weight:600;transition:filter .2s}
+.scene{position:relative;width:100%;aspect-ratio:3/4;max-height:62vh;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:inset 0 0 40px rgba(0,0,0,.35)}
+.sit{position:absolute;font-size:46px;line-height:1;padding:6px;background:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.45));transition:opacity .4s}
+.sit.gone{opacity:0;pointer-events:none}
+.sit.hitok{animation:found .9s forwards}
+@keyframes found{0%{filter:drop-shadow(0 0 0 #3ddc84)}40%{filter:drop-shadow(0 0 14px #3ddc84)}100%{opacity:0}}
+.sit.hitbad{animation:shake .35s}
+.sit.glow{animation:glow 1s infinite}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 2px #f5c04a)}50%{filter:drop-shadow(0 0 16px #f5c04a)}}
+.bg-market{background:linear-gradient(#c0392b 0 6%,#f5f0e1 6% 9%,#c0392b 9% 12%,transparent 12%),repeating-linear-gradient(0deg,#8b5a2b 0 3px,#a0703c 3px 46px),#a0703c}
+.bg-office{background:linear-gradient(#cfd8dc 0 38%,#6d4c41 38% 41%,#a1887f 41%)}
+.bg-store{background:repeating-linear-gradient(180deg,#eceff1 0 23%,#90a4ae 23% 25%),#eceff1}
+.bg-garage{background:radial-gradient(circle at 30% 70%,rgba(0,0,0,.25) 0 8%,transparent 9%),radial-gradient(circle at 75% 85%,rgba(0,0,0,.2) 0 6%,transparent 7%),radial-gradient(#5d6d7e 1.5px,transparent 2px) 0 0/18px 18px,linear-gradient(#566573 0 45%,#7f8c8d 45%)}
+.bg-kitchen{background:repeating-conic-gradient(#ffffff 0 25%,#d6e4f0 0 50%) 0 0/40px 40px}
+.bg-restaurant{background:linear-gradient(#5d1f1f 0 30%,transparent 30%),repeating-linear-gradient(45deg,#f2e6d0 0 14px,#e8d5b0 14px 28px)}
+.bg-home{background:linear-gradient(#f3e5ab 0 55%,#8d6e63 55% 57%,#bcaaa4 57%)}
+.bg-farm{background:linear-gradient(#81d4fa 0 30%,#7cb342 30%)}
+.bg-street{background:linear-gradient(#90caf9 0 28%,#9e9e9e 28% 34%,#424242 34%),repeating-linear-gradient(90deg,transparent 0 40px,#fff 40px 70px)}
+.bg-paint{background:radial-gradient(circle at 20% 20%,#ffcdd2 0 10%,transparent 11%),radial-gradient(circle at 80% 30%,#c8e6c9 0 9%,transparent 10%),radial-gradient(circle at 40% 80%,#bbdefb 0 12%,transparent 13%),#fafafa}
+.sit.target{z-index:2;animation:glow 1s infinite}
+.pointer{position:absolute;left:50%;top:-34px;transform:translateX(-50%);font-size:28px;animation:bob .8s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-8px)}}
+.namebar{display:flex;align-items:center;gap:12px;margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.timer{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;min-width:74px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
 .side{width:52px;height:52px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:20px}
@@ -276,6 +319,19 @@ svg.trend text{fill:var(--muted);font-size:10px}
   </div>
 </section>
 
+<!-- VOCAB SET MENU -->
+<section id="s-set" class="screen">
+  <header><button class="iconbtn" id="setBack" aria-label="Back">‹</button><h1 id="setTitle">Set</h1></header>
+  <div class="scroll" id="setBody"></div>
+</section>
+
+<!-- VOCAB GAME (learn / quiz / match) -->
+<section id="s-game" class="screen">
+  <header><button class="iconbtn" id="gameBack" aria-label="Back">‹</button><h1 id="gameTitle">Game</h1></header>
+  <div style="padding:8px 16px 0"><div class="note" id="gameSub" style="margin:0;text-align:center"></div></div>
+  <div class="scroll" id="gameBody"></div>
+</section>
+
 <!-- CHAT -->
 <section id="s-chat" class="screen">
   <header>
@@ -313,7 +369,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "12 (usage & budget)";
+const APP_VERSION = "15 (vocab games + scenes)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -1253,6 +1309,13 @@ const VOCAB=[
   ["✈️","el avión","airplane"],["🚲","la bicicleta","bicycle","bici"],["🏍️","la moto","motorcycle","motocicleta"],["🚆","el tren","train"],["🚢","el barco","ship / boat","buque"],
   ["🚚","el camión","truck","tráiler|camión de carga"],["🚑","la ambulancia","ambulance"],["🚓","la patrulla","police car","carro de policía"],["🚁","el helicóptero","helicopter"],
   ["⛽","la gasolinera","gas station","bomba"],["🚦","el semáforo","traffic light"],["🛣️","la carretera","highway","autopista"],["🗺️","el mapa","map"]]},
+ {id:"mechanic",ic:"🔧",t:"Car parts & tools",w:[
+  ["🛞","la llanta","tire / wheel","neumático|rueda|caucho"],["🔋","la batería","car battery","acumulador"],["🔧","la llave inglesa","wrench","llave|perica"],
+  ["🪛","el desarmador","screwdriver","destornillador"],["🔩","el tornillo","bolt / screw","tuerca|tornillos"],["🛢️","el aceite","oil","aceite de motor"],
+  ["⛽","la gasolina","gasoline","nafta|combustible"],["🧰","la caja de herramientas","toolbox","herramientas"],["🔨","el martillo","hammer"],
+  ["🪚","la sierra","saw","serrucho"],["⚙️","el engranaje","gear","engrane"],["🧲","el imán","magnet"],["🔦","la linterna","flashlight","lámpara"],
+  ["🧤","los guantes","work gloves","guante"],["🧯","el extintor","fire extinguisher","extinguidor"],["🔑","la llave del carro","car key","llave|llaves"],
+  ["🪝","el gancho","hook"],["🪢","la cuerda","rope","soga|mecate"],["🚗","el carro","car","coche|auto"],["🧽","la esponja","sponge"]]},
  {id:"body",ic:"✋",t:"Body",w:[
   ["👁️","el ojo","eye","ojos"],["👂","la oreja","ear","oído|orejas"],["👃","la nariz","nose"],["👄","la boca","mouth"],["🦷","el diente","tooth","dientes|muela"],
   ["👅","la lengua","tongue"],["✋","la mano","hand","manos"],["🦶","el pie","foot","pies"],["🦵","la pierna","leg","piernas"],["💪","el brazo","arm","brazos"],
@@ -1286,14 +1349,14 @@ function vocabWordsLearned(){ return Object.values(V.learned).reduce((a,l)=>a+l.
 function openVocab(){ renderVocabSets(); show("s-vocab"); }
 function renderVocabSets(){
   const total=VOCAB.reduce((a,s)=>a+s.w.length,0), got=vocabWordsLearned();
-  let h=`<p class="note" style="margin-top:0">Look at the picture and say the word in Spanish. Cards you get right without peeking leave the deck. ${got}/${total} words learned.</p><div class="grid">`;
+  let h=`<p class="note" style="margin-top:0">Pick a set, then Learn it, quiz yourself, play Matching, or say the words. ${got}/${total} words said without help.</p><div class="grid">`;
   for(const s of VOCAB){
     const n=learnedIn(s.id), pct=Math.round(100*n/s.w.length);
     h+=`<button class="card" data-set="${s.id}"><div class="ic">${s.ic}</div><div class="t">${esc(s.t)}</div><div class="d">${n===s.w.length?"✅ All learned":`${n}/${s.w.length} learned`}</div><div class="meter" style="margin:6px 0 0"><i style="width:${pct}%"></i></div></button>`;
   }
-  $("#vocabSets").innerHTML=h+`</div>`;
+  $("#vocabSets").innerHTML=h+`</div>`+renderScenesList();
 }
-$("#vocabSets").addEventListener("click",e=>{ const c=e.target.closest("[data-set]"); if(c) startDeck(c.dataset.set); });
+$("#vocabSets").addEventListener("click",e=>{ const c=e.target.closest("[data-set]"); if(c) openSet(c.dataset.set); });
 
 let deck=null; // {set, queue:[idx], cur, peekedEs, peekedEn, listening, resetArm}
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -1314,7 +1377,7 @@ function renderCard(){
     box.innerHTML=`<div class="vdone"><div style="font-size:64px">🎉</div><h2>¡Todo listo!</h2><p class="note">You learned all ${total} words in ${esc(s.t)}.</p>
       <div style="height:10px"></div><button class="btn" id="deckAgain">Reset and practice again</button><div style="height:10px"></div><button class="btn ghost" id="deckBack2">Pick another set</button></div>`;
     $("#deckAgain").onclick=()=>{ V.learned[s.id]=[]; saveV(); startDeck(s.id); };
-    $("#deckBack2").onclick=()=>openVocab();
+    $("#deckBack2").onclick=()=>openSet(s.id);
     $("#deckCtrls").style.display="none"; return;
   }
   $("#deckCtrls").style.display="";
@@ -1394,7 +1457,7 @@ $("#vShowEn").onclick=()=>{ if(deck&&deck.queue.length){ deck.peekedEn=true; $("
 $("#vKnew").onclick=()=>{ if(deck&&deck.queue.length){ const c=deck.set.w[deck.queue[0]]; if(deck.peekedEs){ toast("You peeked. It'll come back once more."); nextCard(false); } else { toast("Learned: "+c[1]); nextCard(true); } } };
 $("#vSkip").onclick=()=>{ if(deck&&deck.queue.length) nextCard(false); };
 $("#cardBox").addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say,"-15%"); });
-$("#deckBack").onclick=()=>openVocab();
+$("#deckBack").onclick=()=>openSet(deck.set.id);
 $("#vocabBack").onclick=goHome;
 $("#openVocab").onclick=openVocab;
 $("#deckReset").onclick=()=>{
@@ -1402,6 +1465,393 @@ $("#deckReset").onclick=()=>{
   if(!deck.resetArm){ deck.resetArm=true; b.textContent="Tap again to reset"; setTimeout(()=>{ if(deck){ deck.resetArm=false; b.textContent="Reset"; } },3000); return; }
   V.learned[deck.set.id]=[]; saveV(); toast("Set reset"); startDeck(deck.set.id); $("#deckReset").textContent="Reset";
 };
+
+/* ---------- vocab set menu + Learn / Multiple choice / Matching ---------- */
+V.studied=V.studied||{}; V.best=V.best||{};
+let curSetId=null, game=null;
+const setById=id=>VOCAB.find(s=>s.id===id);
+function smallPic(c){ return c[0].startsWith("#")?`<span class="swatch sm" style="background:${c[0]}"></span>`:`<span class="vpic sm">${c[0]}</span>`; }
+function openSet(id){
+  curSetId=id; game=null; const s=setById(id), n=s.w.length;
+  const st=(V.studied[id]||[]).length, ln=learnedIn(id), b=V.best[id]||{};
+  $("#setTitle").textContent=s.ic+" "+s.t;
+  $("#setBody").innerHTML=`
+    <div class="tiles">
+      <div class="tile"><div class="v">${st}/${n}</div><div class="k">studied in Learn</div></div>
+      <div class="tile"><div class="v">${ln}/${n}</div><div class="k">said without help</div></div>
+      <div class="tile"><div class="v">${b.quiz!=null?b.quiz+"%":"–"}</div><div class="k">best multiple choice</div></div>
+      <div class="tile"><div class="v">${b.match!=null?fmtTime(b.match):"–"}</div><div class="k">best matching time</div></div>
+      <div class="tile"><div class="v">${b.find!=null?b.find+"%":"–"}</div><div class="k">best Find it</div></div>
+      <div class="tile"><div class="v">${b.name!=null?b.name+"%":"–"}</div><div class="k">best Name it</div></div>
+    </div>
+    <button class="mode" data-mode="learn"><span class="mi">📖</span><span><b>Learn</b><br><span class="note" style="margin:0">See and hear 5 words at a time, then a quick check until you get them</span></span></button>
+    <button class="mode" data-mode="quiz"><span class="mi">🔤</span><span><b>Multiple choice</b><br><span class="note" style="margin:0">Pick the right word or picture. Misses come back.</span></span></button>
+    <button class="mode" data-mode="match"><span class="mi">🧩</span><span><b>Matching</b><br><span class="note" style="margin:0">Match pictures to words against the clock</span></span></button>
+    <button class="mode" data-mode="find"><span class="mi">🔎</span><span><b>Find it</b><br><span class="note" style="margin:0">Listen: a helper asks for an item, you tap it in a scene</span></span></button>
+    <button class="mode" data-mode="name"><span class="mi">🗣️</span><span><b>Name it</b> · timed<br><span class="note" style="margin:0">An item lights up in a scene, say it fast. Scored on accuracy, pronunciation and speed.</span></span></button>
+    <button class="mode" data-mode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">Picture only. Say the word. Cards you get leave the deck.</span></span></button>
+    <p class="note" style="text-align:center">Suggested order: Learn → Multiple choice → Matching → Find it → Name it / Say it</p>`;
+  show("s-set");
+}
+$("#setBody").addEventListener("click",e=>{
+  const m=e.target.closest("[data-mode]"); if(!m) return; unlockAudio();
+  const md=m.dataset.mode;
+  if(md==="say") startDeck(curSetId); else if(md==="find") startScene(SET_SCENE[curSetId]||"home", curSetId); else if(md==="name") startName(SET_SCENE[curSetId]||"home", curSetId); else if(md==="learn") startLearn(); else if(md==="quiz") startQuiz(); else startMatch();
+});
+$("#setBack").onclick=openVocab;
+$("#gameBack").onclick=()=>{ if(game&&game.timer) clearInterval(game.timer); const back=game&&game.back; game=null; if(back) back(); else openSet(curSetId); };
+const fmtTime=s=>s<60?s+"s":Math.floor(s/60)+"m "+String(s%60).padStart(2,"0")+"s";
+function gameShell(title,sub){ $("#gameTitle").textContent=title; $("#gameSub").textContent=sub||""; show("s-game"); }
+function gbody(h){ $("#gameBody").innerHTML=h; }
+function markStudied(words){ const l=V.studied[curSetId]=V.studied[curSetId]||[]; for(const w of words) if(!l.includes(w)) l.push(w); saveV(); }
+// Pick n distractors from the set (excluding the answer)
+function distractors(set,ans,n){ return shuffle(set.w.filter(c=>c!==ans)).slice(0,n); }
+
+/* ---- Learn: batches of 5 → flashcards → check ---- */
+function startLearn(){
+  const s=setById(curSetId), done=new Set(V.studied[curSetId]||[]);
+  let pool=s.w.filter(c=>!done.has(c[1])); const review=!pool.length;
+  if(review) pool=s.w.slice();
+  const items=shuffle(pool).slice(0,5);
+  game={kind:"learn", items, i:0, phase:"show", queue:[], review};
+  gameShell("📖 Learn · "+s.t, review?"Review round: you've studied every word":`Batch: ${items.length} new words`);
+  renderLearn();
+}
+function renderLearn(){
+  const g=game, s=setById(curSetId);
+  if(g.phase==="show"){
+    const c=g.items[g.i];
+    gbody(`<div class="note" style="text-align:center;margin:0">Card ${g.i+1} of ${g.items.length}</div>
+      <div class="vcard pop">${vocabPic(c,true)}
+        <div class="vword" style="margin-top:12px">${tapWords(c[1])}</div>
+        <div style="font-size:18px;color:var(--muted);margin-top:4px">${esc(c[2])}</div>
+        ${c[4]?`<div class="note">${esc(c[4])}</div>`:""}
+        <div class="row" style="margin-top:14px;width:100%"><button class="btn ghost" data-say="${esc(c[1])}" data-rate="-10%">▶︎ Hear it</button><button class="btn ghost" data-say="${esc(c[1])}" data-rate="-40%">🐢 Slow</button></div>
+        <button class="btn ghost" id="repeatBtn" style="margin-top:10px">🎤 Repeat after me</button><div id="repeatRes" class="vres" style="min-height:24px"></div>
+      </div>
+      <button class="btn" id="learnNext">${g.i<g.items.length-1?"Next card ›":"Check yourself ›"}</button>`);
+    say(c[1],"-10%");
+    $("#learnNext").onclick=()=>{ if(g.i<g.items.length-1){ g.i++; renderLearn(); } else { g.phase="check"; g.queue=shuffle(g.items.slice()); g.first=new Set(); renderLearn(); } };
+    $("#repeatBtn").onclick=async()=>{
+      const b=$("#repeatBtn"); b.textContent="Listening…"; b.disabled=true;
+      let t=null; try{ t=await listenOnce(); }catch(e){ toast("Mic error: "+e.message,4000); }
+      if(!$("#repeatBtn")) return;
+      b.textContent="🎤 Repeat after me"; b.disabled=false;
+      if(!t||!t.text){ $("#repeatRes").innerHTML=`<span class="note">Didn't hear you. Try again.</span>`; return; }
+      const ok=vocabMatch(c,t.text);
+      $("#repeatRes").innerHTML=ok?`<span class="ok">✓ Nice!</span> ${t.pron!=null?`<span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span>`:""}`
+        :`<span class="err">Heard "${esc(t.text)}". Listen again and retry.</span>`;
+    };
+    return;
+  }
+  if(g.phase==="check"){
+    if(!g.queue.length){
+      markStudied(g.items.map(c=>c[1]));
+      const left=s.w.filter(c=>!(V.studied[curSetId]||[]).includes(c[1])).length;
+      gbody(`<div class="vdone"><div style="font-size:60px">✅</div><h2>Batch learned!</h2>
+        <div class="chips" style="justify-content:center;margin:10px 0">${g.items.map(c=>`<span class="chip">${smallPic(c)} ${esc(c[1])}</span>`).join("")}</div>
+        <p class="note">${left?`${left} words left to study in this set.`:"You've studied every word in this set."}</p>
+        <button class="btn" id="lMore">${left?"Next 5 words":"Review 5 random words"}</button><div style="height:10px"></div>
+        <button class="btn ghost" id="lQuiz">Multiple choice on this set</button><div style="height:10px"></div>
+        <button class="btn ghost" id="lBack">Back to set</button></div>`);
+      $("#lMore").onclick=startLearn; $("#lQuiz").onclick=startQuiz; $("#lBack").onclick=()=>openSet(curSetId);
+      return;
+    }
+    const c=g.queue[0], pool=g.items.length>=4?g.items:s.w;
+    const opts=shuffle([c].concat(shuffle(pool.filter(x=>x!==c)).slice(0,3)));
+    gbody(`<div class="note" style="text-align:center;margin:0">Quick check · ${g.queue.length} to go · Which word is this?</div>
+      <div class="vcard pop" style="padding-bottom:8px">${vocabPic(c,true)}</div>
+      <div class="opts">${opts.map((o,k)=>`<button class="opt" data-k="${k}">${esc(o[1])}</button>`).join("")}</div>`);
+    $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      if(g.lock) return; g.lock=true;
+      const o=opts[+b.dataset.k], right=o===c;
+      b.classList.add(right?"right":"wrong");
+      if(!right){ $("#gameBody").querySelectorAll(".opt")[opts.indexOf(c)].classList.add("right"); }
+      say(c[1],"-10%");
+      setTimeout(()=>{ g.lock=false; g.queue.shift(); if(!right) g.queue.splice(Math.min(g.queue.length,2),0,c); renderLearn(); }, right?900:1800);
+    });
+  }
+}
+
+/* ---- Multiple choice: whole set, two question types, misses come back ---- */
+function startQuiz(){
+  const s=setById(curSetId);
+  game={kind:"quiz", queue:shuffle(s.w.slice()), total:s.w.length, firstTry:0, seen:new Set(), n:0};
+  gameShell("🔤 Multiple choice · "+s.t, `${s.w.length} words`);
+  renderQuiz();
+}
+function renderQuiz(){
+  const g=game, s=setById(curSetId);
+  $("#gameSub").textContent=`${g.total-g.queue.length}/${g.total} done · ${g.firstTry} right first try`;
+  if(!g.queue.length){
+    const pct=Math.round(100*g.firstTry/g.total), b=V.best[curSetId]=V.best[curSetId]||{};
+    const rec=b.quiz==null||pct>b.quiz; if(rec){ b.quiz=pct; saveV(); }
+    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":pct>=70?"🎉":"💪"}</div><h2>${pct}% first try</h2>
+      <p class="note">${rec?"New best for this set!":`Best: ${b.quiz}%`}</p>
+      <button class="btn" id="qAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="qMatch">Try Matching</button><div style="height:10px"></div><button class="btn ghost" id="qBack">Back to set</button></div>`);
+    $("#qAgain").onclick=startQuiz; $("#qMatch").onclick=startMatch; $("#qBack").onclick=()=>openSet(curSetId);
+    return;
+  }
+  const c=g.queue[0], opts=shuffle([c].concat(distractors(s,c,3)));
+  const type=(g.n++%2===0)?"pic2word":"word2pic";
+  if(type==="pic2word"){
+    gbody(`<div class="note" style="text-align:center;margin:0">What is this in Spanish?</div>
+      <div class="vcard pop" style="padding-bottom:8px">${vocabPic(c,true)}</div>
+      <div class="opts">${opts.map((o,k)=>`<button class="opt" data-k="${k}">${esc(o[1])}</button>`).join("")}</div>`);
+  } else {
+    gbody(`<div class="note" style="text-align:center;margin:0">Tap the picture for:</div>
+      <div style="text-align:center;margin:10px 0 14px"><span class="vword">${esc(c[1])}</span> <button class="play" data-say="${esc(c[1])}">▶︎</button></div>
+      <div class="pgrid">${opts.map((o,k)=>`<button class="opt pic" data-k="${k}">${vocabPic(o,false)}</button>`).join("")}</div>`);
+    say(c[1],"-10%");
+  }
+  $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    if(g.lock) return; g.lock=true;
+    const right=opts[+b.dataset.k]===c;
+    b.classList.add(right?"right":"wrong");
+    if(!right) $("#gameBody").querySelectorAll(".opt")[opts.indexOf(c)].classList.add("right");
+    if(right&&!g.seen.has(c[1])) g.firstTry++;
+    g.seen.add(c[1]);
+    if(type==="pic2word"||!right) say(c[1],"-10%");
+    const cap=!right?`<div class="note" style="text-align:center">${smallPic(c)} <b>${esc(c[1])}</b> = ${esc(c[2])}</div>`:"";
+    if(cap) $("#gameBody").insertAdjacentHTML("beforeend",cap);
+    setTimeout(()=>{ g.lock=false; g.queue.shift(); if(!right) g.queue.splice(Math.min(g.queue.length,3),0,c); renderQuiz(); }, right?900:2000);
+  });
+}
+
+/* ---- Matching: rounds of 6 pairs, timed ---- */
+function startMatch(){
+  const s=setById(curSetId), all=shuffle(s.w.slice()), rounds=[];
+  for(let i=0;i<all.length;i+=6) rounds.push(all.slice(i,i+6));
+  if(rounds.length>1&&rounds[rounds.length-1].length<3){ const last=rounds.pop(); rounds[rounds.length-1].push(...last); }
+  game={kind:"match", rounds, r:0, start:Date.now(), misses:0, sel:null};
+  gameShell("🧩 Matching · "+s.t,"");
+  game.timer=setInterval(()=>{ if(game&&game.kind==="match") $("#gameSub").textContent=`Round ${game.r+1}/${game.rounds.length} · ${fmtTime(Math.round((Date.now()-game.start)/1000))} · ${game.misses} misses`; },500);
+  renderMatch();
+}
+function renderMatch(){
+  const g=game, round=g.rounds[g.r];
+  g.left=shuffle(round.slice()); g.right=shuffle(round.slice()); g.done=new Set(); g.sel=null;
+  gbody(`<div class="note" style="text-align:center;margin:0 0 10px">Tap a picture, then its Spanish word.</div>
+    <div class="mgrid"><div class="mcol">${g.left.map((c,k)=>`<button class="mt pic" data-side="L" data-k="${k}">${vocabPic(c,false)}</button>`).join("")}</div>
+    <div class="mcol">${g.right.map((c,k)=>`<button class="mt" data-side="R" data-k="${k}">${esc(c[1])}</button>`).join("")}</div></div>`);
+  $("#gameBody").querySelectorAll(".mt").forEach(b=>b.onclick=()=>matchTap(b));
+}
+function matchTap(b){
+  const g=game; if(b.classList.contains("done")||g.lock) return;
+  const side=b.dataset.side, c=(side==="L"?g.left:g.right)[+b.dataset.k];
+  if(side==="R") say(c[1],"-10%");
+  if(!g.sel||g.sel.side===side){
+    $("#gameBody").querySelectorAll(".mt.sel").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel"); g.sel={side,c,b}; return;
+  }
+  const a=g.sel; g.sel=null;
+  if(a.c===c){
+    [a.b,b].forEach(x=>{ x.classList.remove("sel"); x.classList.add("done"); });
+    if(side==="L") say(c[1],"-10%");
+    g.done.add(c[1]);
+    if(g.done.size===g.left.length){
+      g.lock=true;
+      setTimeout(()=>{ g.lock=false; g.r++; if(g.r<g.rounds.length) renderMatch(); else endMatch(); },700);
+    }
+  } else {
+    g.misses++; g.lock=true;
+    [a.b,b].forEach(x=>{ x.classList.remove("sel"); x.classList.add("bad"); });
+    setTimeout(()=>{ [a.b,b].forEach(x=>x.classList.remove("bad")); g.lock=false; },600);
+  }
+}
+function endMatch(){
+  const g=game; clearInterval(g.timer);
+  const secs=Math.round((Date.now()-g.start)/1000)+g.misses*3; // 3s penalty per miss
+  const b=V.best[curSetId]=V.best[curSetId]||{}; const rec=b.match==null||secs<b.match; if(rec){ b.match=secs; saveV(); }
+  $("#gameSub").textContent="";
+  gbody(`<div class="vdone"><div style="font-size:60px">${rec?"🏆":"🧩"}</div><h2>${fmtTime(secs)}</h2>
+    <p class="note">${g.misses} misses (+3s each). ${rec?"New best time!":`Best: ${fmtTime(b.match)}`}</p>
+    <button class="btn" id="mAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="mSay">Try Say it</button><div style="height:10px"></div><button class="btn ghost" id="mBack">Back to set</button></div>`);
+  $("#mAgain").onclick=startMatch; $("#mSay").onclick=()=>startDeck(curSetId); $("#mBack").onclick=()=>openSet(curSetId);
+}
+$("#gameBody").addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b&&!b.classList.contains("mt")) say(b.dataset.say,b.dataset.rate||"-10%"); });
+
+/* ---------- Find it: listening scenes ---------- */
+const SCENES=[
+  {id:"market",t:"Farmers market",ic:"🧺",helper:"👵",name:"Doña Rosa",bg:"market",sets:["fruits","veg"]},
+  {id:"office",t:"Office",ic:"🏢",helper:"👩‍💼",name:"Laura",bg:"office",sets:["office"]},
+  {id:"techstore",t:"Computer store",ic:"🖥️",helper:"🧑‍💻",name:"Diego",bg:"store",sets:["electronics"]},
+  {id:"garage",t:"Mechanic shop",ic:"🔧",helper:"👨‍🔧",name:"Don Toño",bg:"garage",sets:["mechanic"]},
+  {id:"kitchen",t:"Kitchen",ic:"🍳",helper:"👩‍🍳",name:"Abuela",bg:"kitchen",sets:["kitchen","drinks"]},
+  {id:"restaurant",t:"Restaurant",ic:"🍽️",helper:"🤵",name:"Carlos",bg:"restaurant",sets:["restaurant","food"]},
+  {id:"home",t:"At home",ic:"🛋️",helper:"👨",name:"Pablo",bg:"home",sets:["house"]},
+  {id:"shop",t:"Clothing store",ic:"🛍️",helper:"👩",name:"Sofía",bg:"store",sets:["clothes","store"]},
+  {id:"farm",t:"Farm & zoo",ic:"🐄",helper:"🤠",name:"Memo",bg:"farm",sets:["animals"]},
+  {id:"street",t:"City street",ic:"🚦",helper:"👮",name:"Oficial Ruiz",bg:"street",sets:["transport"]},
+  {id:"paint",t:"Paint shop",ic:"🎨",helper:"🧑‍🎨",name:"Frida",bg:"paint",sets:["colors"]}
+];
+const SET_SCENE={fruits:"market",veg:"market",office:"office",electronics:"techstore",mechanic:"garage",kitchen:"kitchen",drinks:"kitchen",
+  restaurant:"restaurant",food:"restaurant",house:"home",clothes:"shop",store:"shop",animals:"farm",transport:"street",colors:"paint",basics:"home",body:"home"};
+function findPrompt(c){
+  const isColor=c[0].startsWith("#"); const w=isColor?"el color "+c[1]:c[1];
+  const pl=/^(los|las)\s/.test(c[1]);
+  const t=[`¿Dónde ${pl?"están":"está"} ${w}?`,`Encuentra ${w}.`,`Busca ${w}, por favor.`,`¿Me pasas ${w}?`,`Necesito ${w}.`];
+  return t[Math.floor(Math.random()*t.length)];
+}
+function renderScenesList(){
+  return `<h3 style="margin:18px 0 6px">🔎 Find it: listening scenes</h3>
+  <p class="note" style="margin-top:0">A helper asks for an item out loud. Tap it in the scene.</p>
+  <div class="grid">${SCENES.map(sc=>`<button class="card" data-scene="${sc.id}"><div class="ic">${sc.ic}</div><div class="t">${esc(sc.t)}</div><div class="d">${(V.best["scene_"+sc.id]||{}).find!=null?`Best: ${V.best["scene_"+sc.id].find}% first try`:sc.sets.map(s=>setById(s).t).join(" + ")}</div></button>`).join("")}</div>`;
+}
+function startScene(sceneId, onlySet){
+  if(needKeys()){ toast("Add your keys first"); openSettings(); return; }
+  unlockAudio();
+  const sc=SCENES.find(x=>x.id===sceneId);
+  const words=(onlySet?[onlySet]:sc.sets).flatMap(id=>setById(id).w);
+  const uniq=[...new Map(words.map(c=>[c[1],c])).values()];
+  const items=shuffle(uniq).slice(0,16);
+  const targets=shuffle(items.slice()).slice(0,Math.min(8,items.length));
+  game={kind:"find", sc, items, targets, t:0, firstTry:0, misses:0, tries:0, showText:false, key:onlySet||("scene_"+sc.id), back:onlySet?()=>openSet(onlySet):openVocab};
+  gameShell("🔎 "+sc.t, "");
+  renderFind(true);
+}
+function placeItems(n){
+  // jittered grid so items don't overlap
+  const cols=4, rows=Math.ceil(n/cols), pos=[];
+  const cells=shuffle([...Array(cols*rows).keys()]).slice(0,n);
+  for(const k of cells){
+    const r=Math.floor(k/cols), c=k%cols;
+    pos.push({x:(c+0.5+(Math.random()-0.5)*0.5)/cols*100, y:(r+0.5+(Math.random()-0.5)*0.45)/rows*100,
+      rot:Math.round((Math.random()-0.5)*30), s:0.85+Math.random()*0.35});
+  }
+  return pos;
+}
+function renderFind(first){
+  const g=game;
+  if(g.t>=g.targets.length){
+    const pct=Math.round(100*g.firstTry/g.targets.length), b=V.best[g.key]=V.best[g.key]||{};
+    const rec=b.find==null||pct>b.find; if(rec){ b.find=pct; saveV(); }
+    $("#gameSub").textContent="";
+    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":pct>=70?"🎉":"👂"}</div><h2>${pct}% first try</h2>
+      <p class="note">${g.misses} wrong taps. ${rec?"New best!":`Best: ${b.find}%`}</p>
+      <div class="chips" style="justify-content:center;margin:10px 0">${g.targets.map(c=>`<button class="chip" data-say="${esc(c[1])}">${smallPic(c)} ${esc(c[1])}</button>`).join("")}</div>
+      <button class="btn" id="fAgain">New scene</button><div style="height:10px"></div><button class="btn ghost" id="fBack">Back</button></div>`);
+    $("#fAgain").onclick=()=>startScene(g.sc.id, g.key.startsWith("scene_")?null:g.key); $("#fBack").onclick=g.back;
+    return;
+  }
+  if(first){ g.pos=placeItems(g.items.length); g.found=new Set(); }
+  const c=g.targets[g.t]; g.prompt=findPrompt(c); g.tries=0;
+  $("#gameSub").textContent=`Find ${g.t+1} of ${g.targets.length} · ${g.firstTry} first try`;
+  gbody(`<div class="helper"><span class="hav">${g.sc.helper}</span><div class="bubble"><div class="hn">${esc(g.sc.name)}</div>
+      <div class="ht" id="fText" style="${g.showText?"":"filter:blur(6px)"}">${esc(g.prompt)}</div></div></div>
+    <div class="row" style="margin:8px 0"><button class="btn ghost" id="fHear">🔊 Hear again</button><button class="btn ghost" id="fShow">${g.showText?"Hide text":"Show text"}</button></div>
+    <div class="scene bg-${g.sc.bg}" id="sceneBox">${g.items.map((it,k)=>{ const p=g.pos[k];
+      return `<button class="sit${g.found.has(it[1])?" gone":""}" data-k="${k}" style="left:${p.x}%;top:${p.y}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch" style="width:46px;height:46px;background:${it[0]}"></span>`:it[0]}</button>`; }).join("")}</div>
+    <div class="note" id="fMsg" style="text-align:center;min-height:22px;margin-top:8px"></div>`);
+  say(g.prompt,"-10%");
+  $("#fHear").onclick=()=>say(g.prompt,"-25%");
+  $("#fShow").onclick=()=>{ g.showText=!g.showText; $("#fText").style.filter=g.showText?"":"blur(6px)"; $("#fShow").textContent=g.showText?"Hide text":"Show text"; };
+  $("#sceneBox").querySelectorAll(".sit").forEach(b=>b.onclick=()=>{
+    if(g.lock) return;
+    const it=g.items[+b.dataset.k];
+    if(it===c){
+      g.lock=true; if(g.tries===0) g.firstTry++;
+      b.classList.add("hitok"); g.found.add(it[1]);
+      $("#fMsg").innerHTML=`<span class="ok">✓ ¡Eso es! ${esc(c[1])}</span> · ${esc(c[2])}`;
+      say("¡Eso es! "+c[1],"-10%");
+      setTimeout(()=>{ g.lock=false; g.t++; renderFind(false); },1400);
+    } else {
+      g.tries++; g.misses++;
+      b.classList.add("hitbad"); setTimeout(()=>b.classList.remove("hitbad"),500);
+      $("#fMsg").innerHTML=`<span class="err">Eso es ${esc(it[1])}</span> <span class="note">(${esc(it[2])})</span>`;
+      say("No, eso es "+it[1],"-10%");
+      if(g.tries>=2){ const k=g.items.indexOf(c); const t=$("#sceneBox").querySelector(`[data-k="${k}"]`); if(t) t.classList.add("glow"); }
+    }
+  });
+}
+$("#vocabSets").addEventListener("click",e=>{ const c=e.target.closest("[data-scene]"); if(c) chooseSceneMode(c.dataset.scene); });
+
+/* ---------- Name it: scene points at an item, you say it (timed, scored) ---------- */
+function chooseSceneMode(sceneId, onlySet){
+  const sc=SCENES.find(x=>x.id===sceneId);
+  openSheet(`<h2>${sc.ic} ${esc(sc.t)}</h2><p class="note" style="margin-top:0">Pick a mode</p>
+    <button class="mode" id="cmFind"><span class="mi">👂</span><span><b>Find it</b><br><span class="note" style="margin:0">Hear the word, tap the item</span></span></button>
+    <button class="mode" id="cmName"><span class="mi">🗣️</span><span><b>Name it</b> · timed<br><span class="note" style="margin:0">An item lights up, say it fast. Scored on accuracy, pronunciation and speed.</span></span></button>`);
+  $("#cmFind").onclick=()=>{ closeSheet(); startScene(sceneId,onlySet); };
+  $("#cmName").onclick=()=>{ closeSheet(); startName(sceneId,onlySet); };
+}
+function startName(sceneId, onlySet){
+  if(needKeys()){ toast("Add your keys first"); openSettings(); return; }
+  unlockAudio();
+  const sc=SCENES.find(x=>x.id===sceneId);
+  const words=(onlySet?[onlySet]:sc.sets).flatMap(id=>setById(id).w);
+  const items=shuffle([...new Map(words.map(c=>[c[1],c])).values()]).slice(0,16);
+  game={kind:"name", sc, items, targets:shuffle(items.slice()).slice(0,Math.min(8,items.length)), t:0, results:[],
+        key:(onlySet||("scene_"+sc.id)), back:onlySet?()=>openSet(onlySet):openVocab, pos:placeItems(items.length), started:false};
+  gameShell("🗣️ Name it · "+sc.t,"");
+  renderName();
+}
+function nameScore(ok, pron, secs){
+  if(!ok) return {acc:0,pr:0,sp:0,total:0};
+  const acc=50, pr=Math.round(30*Math.max(0,Math.min(100,pron??70))/100);
+  const sp=Math.round(20*Math.max(0,Math.min(1,(7-secs)/(7-1.5))));
+  return {acc,pr,sp,total:acc+pr+sp};
+}
+function sceneHTML(g,hi){
+  return `<div class="scene bg-${g.sc.bg}" id="sceneBox">${g.items.map((it,k)=>{ const p=g.pos[k];
+    return `<div class="sit${k===hi?" target":""}" style="left:${p.x}%;top:${p.y}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch" style="width:46px;height:46px;background:${it[0]}"></span>`:it[0]}${k===hi?`<span class="pointer">👇</span>`:""}</div>`; }).join("")}</div>`;
+}
+async function renderName(){
+  const g=game;
+  if(!g.started){
+    gbody(`<div class="helper"><span class="hav">${g.sc.helper}</span><div class="bubble"><div class="hn">${esc(g.sc.name)}</div><div class="ht">¿Cómo se llama? Say each item as fast as you can!</div></div></div>
+      <div class="note" style="margin:10px 0">${g.targets.length} items. Each one lights up and the mic opens by itself. Score per item: accuracy 50 + pronunciation 30 + speed 20 (full speed bonus under ~1.5s).</div>
+      ${sceneHTML(g,-1)}<div style="height:12px"></div><button class="btn" id="nStart">Start ▶︎</button>`);
+    $("#nStart").onclick=()=>{ g.started=true; unlockAudio(); renderName(); };
+    return;
+  }
+  if(g.t>=g.targets.length) return endName();
+  const c=g.targets[g.t], k=g.items.indexOf(c);
+  const tot=g.results.reduce((a,r)=>a+r.s.total,0);
+  $("#gameSub").textContent=`Item ${g.t+1} of ${g.targets.length} · ${tot} pts`;
+  gbody(`${sceneHTML(g,k)}
+    <div class="namebar"><div class="timer" id="nTimer">0.0s</div><div id="nStatus" class="note" style="margin:0">🎤 Listening… say it!</div></div>
+    <div id="nRes" class="vres" style="text-align:center"></div>`);
+  const t0=performance.now(); let live=true;
+  const tick=setInterval(()=>{ if(!live||!$("#nTimer")) return clearInterval(tick); $("#nTimer").textContent=((performance.now()-t0)/1000).toFixed(1)+"s"; },100);
+  let r=null; try{ r=await listenOnce(); }catch(e){ toast("Mic error: "+e.message,4000); }
+  live=false; clearInterval(tick);
+  if(game!==g) return;
+  // Subtract the recognizer's end-of-speech wait so the clock reflects when you finished talking.
+  const secs=Math.max(0,(performance.now()-t0)/1000-0.8);
+  if(!r||!r.text){
+    $("#nStatus").textContent="Didn't hear anything.";
+    $("#nRes").innerHTML=`<button class="btn ghost" id="nRetry">🎤 Try this one again</button><div style="height:8px"></div><button class="btn ghost" id="nSkip">Skip (0 pts)</button>`;
+    $("#nRetry").onclick=()=>renderName();
+    $("#nSkip").onclick=()=>{ g.results.push({c,ok:false,heard:"",pron:null,secs:null,s:nameScore(false)}); say(c[1],"-10%"); g.t++; renderName(); };
+    return;
+  }
+  const ok=vocabMatch(c,r.text), s=nameScore(ok,r.pron,secs);
+  g.results.push({c,ok,heard:r.text,pron:r.pron,secs,s});
+  $("#nTimer").textContent=secs.toFixed(1)+"s";
+  $("#nStatus").innerHTML=ok?`<span class="ok">✓ ${esc(c[1])}</span>`:`<span class="err">✗ Heard "${esc(r.text)}". It's <b>${esc(c[1])}</b></span>`;
+  $("#nRes").innerHTML=`<div class="chips" style="justify-content:center"><span class="pill ${ok?"g":"b"}">Accuracy ${s.acc}/50</span><span class="pill ${cls(r.pron??0)}">Pronunciation ${s.pr}/30</span><span class="pill ${s.sp>=14?"g":s.sp>=7?"o":"b"}">Speed ${s.sp}/20</span></div><div style="font-size:22px;font-weight:700;margin-top:6px">+${s.total}</div>`;
+  if(!ok) say(c[1],"-10%");
+  setTimeout(()=>{ if(game===g){ g.t++; renderName(); } }, ok?1600:2600);
+}
+function endName(){
+  const g=game, R=g.results, n=R.length, max=n*100;
+  const tot=R.reduce((a,r)=>a+r.s.total,0), accN=R.filter(r=>r.ok).length;
+  const prs=R.filter(r=>r.ok&&r.pron!=null).map(r=>r.pron), sps=R.filter(r=>r.ok).map(r=>r.secs);
+  const pct=Math.round(100*tot/max), b=V.best[g.key]=V.best[g.key]||{}; const rec=b.name==null||pct>b.name; if(rec){ b.name=pct; saveV(); }
+  const grade=pct>=90?"🏆 Fluent fast":pct>=75?"🎉 Strong":pct>=55?"👍 Getting there":"💪 Keep practicing";
+  $("#gameSub").textContent="";
+  gbody(`<div class="vdone" style="padding-top:10px"><h2 style="margin-bottom:2px">${tot} / ${max}</h2><div class="note" style="margin:0">${grade} · ${pct}%${rec?" · New best!":` · Best ${b.name}%`}</div>
+    <div class="tiles" style="margin-top:14px">
+      <div class="tile"><div class="v">${accN}/${n}</div><div class="k">accuracy</div></div>
+      <div class="tile"><div class="v">${mean(prs)??"–"}</div><div class="k">avg pronunciation</div></div>
+      <div class="tile"><div class="v">${sps.length?(sps.reduce((a,x)=>a+x,0)/sps.length).toFixed(1)+"s":"–"}</div><div class="k">avg response time</div></div>
+      <div class="tile"><div class="v">${R.reduce((a,r)=>a+r.s.sp,0)}/${n*20}</div><div class="k">speed points</div></div>
+    </div>
+    <div style="text-align:left">${R.map(r=>`<div class="hist" style="display:flex;gap:10px;align-items:center">${smallPic(r.c)}<span style="flex:1">${r.ok?"✓":"✗"} <b class="tw" data-w="${esc(r.c[1])}">${esc(r.c[1])}</b>${r.ok?"":` <span class="note">(heard "${esc(r.heard)}")</span>`}</span><span class="note">${r.secs!=null?r.secs.toFixed(1)+"s":"–"} · +${r.s.total}</span></div>`).join("")}</div>
+    <div style="height:14px"></div><button class="btn" id="nAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="nBack">Back</button></div>`);
+  $("#nAgain").onclick=()=>startName(g.sc.id, g.key.startsWith("scene_")?null:g.key); $("#nBack").onclick=g.back;
+}
 
 /* ---------- tap any Spanish word to hear it ---------- */
 document.addEventListener("click",e=>{
