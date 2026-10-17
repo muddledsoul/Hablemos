@@ -29,7 +29,7 @@ Keys live only in the phone's browser storage, never in the code/repo.
 - **Multiple choice**: picture -> word and word -> picture; misses come back.
 - **Matching**: 6 pairs per round, timed (+3s per miss).
 - **Find it**: a helper in a scene asks for every word in the set out loud; tap it. Found items disappear and the spot refills until you have found them all.
-- **Name it**: an item lights up in a scene; say it. Scored on accuracy (50), pronunciation (30), speed (20).
+- **Name it**: an item lights up (bigger, bouncing) in a scene; say it. 3 tries per item. Scored on accuracy (50 / 30 / 15 by try), pronunciation (30), speed (20).
 - **Say it**: picture only; cards you say without peeking leave the deck.
 Scenes (market, office, computer store, mechanic shop, kitchen, restaurant, home, clothing store, farm, street, paint shop, park, weather report) are also listed under the sets.
 
