@@ -385,7 +385,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "18 (Name it: continuous mic)";
+const APP_VERSION = "19 (feelings + weather)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -1352,6 +1352,26 @@ const VOCAB=[
   ["🪚","la sierra","saw","serrucho"],["⚙️","el engranaje","gear","engrane"],["🧲","el imán","magnet"],["🔦","la linterna","flashlight","lámpara"],
   ["🧤","los guantes","work gloves","guante"],["🧯","el extintor","fire extinguisher","extinguidor"],["🔑","la llave del carro","car key","llave|llaves"],
   ["🪝","el gancho","hook"],["🪢","la cuerda","rope","soga|mecate"],["🚗","el carro","car","coche|auto"],["🧽","la esponja","sponge"]]},
+ {id:"feelings",ic:"😀",t:"Feelings",w:[
+  ["😀","feliz","happy","contento|contenta|alegre","Use estar for feelings: Estoy feliz / Estoy contento","adj"],
+  ["😢","triste","sad","","","adj"],["😠","enojado","angry","enojada|enfadado|enfadada|molesto|molesta","","adj"],
+  ["😨","asustado","scared","asustada|con miedo|tengo miedo","","adj"],["😲","sorprendido","surprised","sorprendida","","adj"],
+  ["😴","cansado","tired / sleepy","cansada|con sueño|tengo sueño","","adj"],["😕","confundido","confused","confundida","","adj"],
+  ["😟","preocupado","worried","preocupada","","adj"],["😰","nervioso","nervous","nerviosa|ansioso|ansiosa","","adj"],
+  ["🤒","enfermo","sick","enferma","","adj"],["😍","enamorado","in love","enamorada","","adj"],["😌","tranquilo","calm / relaxed","tranquila|relajado|relajada|calmado|calmada","","adj"],
+  ["😳","avergonzado","embarrassed","avergonzada|apenado|apenada","Watch out: embarazada means pregnant!","adj"],["😑","aburrido","bored","aburrida","","adj"],
+  ["😤","frustrado","frustrated","frustrada","","adj"],["🤩","emocionado","excited","emocionada","","adj"],["🥴","mareado","dizzy","mareada","","adj"],
+  ["😋","tengo hambre","I'm hungry","hambre|hambriento|hambrienta","Spanish says I have hunger: tengo hambre","adj"],["🥵","tengo calor","I'm hot","calor","Tengo calor = I feel hot; hace calor = the weather is hot","adj"],
+  ["🥶","tengo frío","I'm cold","frío","Tengo frío = I feel cold; hace frío = the weather is cold","adj"],["😁","orgulloso","proud","orgullosa","","adj"]]},
+ {id:"weather",ic:"🌦️",t:"Weather",w:[
+  ["☀️","hace sol","it's sunny","sol|soleado|está soleado","Weather often uses hacer: hace sol, hace calor","phrase"],["🌧️","está lloviendo","it's raining","llueve|lluvia|la lluvia","","phrase"],
+  ["🌨️","está nevando","it's snowing","nieva|nieve|la nieve","","phrase"],["☁️","está nublado","it's cloudy","nublado|nubes|la nube","","phrase"],
+  ["🌬️","hace viento","it's windy","viento|el viento","","phrase"],["🥵","hace calor","it's hot","calor","","phrase"],["🥶","hace frío","it's cold","frío","","phrase"],
+  ["⛈️","la tormenta","storm","tormenta eléctrica","","phrase"],["⚡","el relámpago","lightning","rayo|el rayo","","phrase"],["🌈","el arcoíris","rainbow","arco iris","","phrase"],
+  ["🌫️","la niebla","fog","neblina","","phrase"],["🌀","el huracán","hurricane","","","phrase"],["🌪️","el tornado","tornado","","","phrase"],
+  ["☂️","el paraguas","umbrella","sombrilla","","phrase"],["🌡️","la temperatura","temperature","el termómetro|termómetro","","phrase"],
+  ["⛅","parcialmente nublado","partly cloudy","medio nublado","","phrase"],["❄️","el hielo","ice","la escarcha|congelado","","phrase"],["🌙","de noche","at night","la noche|noche","","phrase"],
+  ["🌅","el amanecer","sunrise","amanecer","","phrase"],["🌇","el atardecer","sunset","atardecer|puesta de sol","","phrase"]]},
  {id:"body",ic:"✋",t:"Body",w:[
   ["👁️","el ojo","eye","ojos"],["👂","la oreja","ear","oído|orejas"],["👃","la nariz","nose"],["👄","la boca","mouth"],["🦷","el diente","tooth","dientes|muela"],
   ["👅","la lengua","tongue"],["✋","la mano","hand","manos"],["🦶","el pie","foot","pies"],["🦵","la pierna","leg","piernas"],["💪","el brazo","arm","brazos"],
@@ -1364,7 +1384,8 @@ const noAcc=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase
 const ARTS=/^(el|la|los|las|un|una|unos|unas)\s+/;
 function vocabTargets(card){
   const list=[card[1]].concat(card[3]?card[3].split("|"):[]);
-  return [...new Set(list.map(x=>noAcc(x).replace(ARTS,"")).filter(Boolean))];
+  // strip the same filler words vocabMatch strips from what was heard (e.g. "está lloviendo" -> "lloviendo")
+  return [...new Set(list.map(x=>noAcc(x).replace(ARTS,"").replace(/\b(el|la|los|las|un|una|unos|unas|es|son|eso|esto|este|esta)\b/g," ").replace(/\s+/g," ").trim()).filter(Boolean))];
 }
 // Did what they said contain the word (article optional, singular/plural forgiven)?
 function vocabMatch(card, heard){
@@ -1797,6 +1818,16 @@ function sceneSVG(bg){
       ${P(250,124,.85,"#1565c0","#c68642","#212121","bob")}<rect x="236" y="104" width="28" height="7" rx="3" fill="#0d47a1"/>
       <rect y="146" width="300" height="254" fill="#546e7a"/>`;
     surf=rows((y,i)=>i%2?`<rect x="0" y="${y}" width="300" height="12" fill="#b0bec5"/>`:`<g fill="#fff">${[...Array(8)].map((_,k)=>`<rect x="${k*40}" y="${y+4}" width="22" height="4"/>`).join("")}</g>`);
+  } else if(bg==="park"){
+    back=`<defs><linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ec6ff"/><stop offset="1" stop-color="#d3efff"/></linearGradient></defs>
+      <rect width="300" height="400" fill="url(#sky2)"/>${S.sun(250,34)}${S.cloud(20,26,1)}${S.cloud(140,14,.8)}
+      <path d="M0 120 Q60 92 130 116 T300 104 V170 H0z" fill="#8bc34a"/>
+      ${[[30,118],[270,112]].map(([x,y])=>`<g class="sway" style="transform-origin:${x}px ${y}px"><rect x="${x-4}" y="${y-30}" width="8" height="34" fill="#795548"/><circle cx="${x}" cy="${y-40}" r="22" fill="#43a047"/><circle cx="${x-14}" cy="${y-30}" r="14" fill="#4caf50"/><circle cx="${x+14}" cy="${y-30}" r="14" fill="#388e3c"/></g>`).join("")}
+      <rect x="110" y="114" width="80" height="8" rx="3" fill="#8d6e63"/><rect x="110" y="104" width="80" height="6" rx="3" fill="#a1887f"/><rect x="116" y="122" width="5" height="14" fill="#5d4037"/><rect x="179" y="122" width="5" height="14" fill="#5d4037"/>
+      ${P(132,96,.85,"#ffb74d","#f1c27d","#4e342e","bob")}${P(168,98,.85,"#4fc3f7","#c68642","#212121","bob2")}
+      <circle cx="226" cy="70" r="9" fill="#ef5350"/><line x1="226" y1="79" x2="222" y2="120" stroke="#555" stroke-width="1"/>
+      <rect y="150" width="300" height="250" fill="#9ccc65"/><path d="M120 400 Q150 300 140 150 H160 Q170 300 190 400z" fill="#d7ccc8" opacity=".7"/>`;
+    surf=rows(y=>SLOT_X.map(x=>`<ellipse cx="${x}" cy="${y+6}" rx="28" ry="7" fill="#7cb342"/>`).join(""));
   } else { // paint
     back=`<rect width="300" height="400" fill="#fffaf2"/>${["#ef5350","#42a5f5","#66bb6a","#ffca28","#ab47bc"].map((c,i)=>`<circle cx="${30+i*60}" cy="${20+(i%2)*14}" r="${10+i%3*4}" fill="${c}" opacity=".35"/>`).join("")}
       <g transform="translate(200 40)"><path d="M10 100 l20 -100 l20 100 M30 0 v100" stroke="#8d6e63" stroke-width="5" fill="none"/><rect x="0" y="10" width="60" height="50" fill="#fff" stroke="#bcaaa4" stroke-width="3"/><path d="M8 50 q12 -26 22 -8 q10 -20 22 6" stroke="#42a5f5" stroke-width="4" fill="none"/><circle cx="42" cy="22" r="6" fill="#ffca28"/></g>
@@ -1817,11 +1848,15 @@ const SCENES=[
   {id:"shop",t:"Clothing store",ic:"🛍️",helper:"👩",name:"Sofía",bg:"store",sets:["clothes","store"]},
   {id:"farm",t:"Farm & zoo",ic:"🐄",helper:"🤠",name:"Memo",bg:"farm",sets:["animals"]},
   {id:"street",t:"City street",ic:"🚦",helper:"👮",name:"Oficial Ruiz",bg:"street",sets:["transport"]},
-  {id:"paint",t:"Paint shop",ic:"🎨",helper:"🧑‍🎨",name:"Frida",bg:"paint",sets:["colors"]}
+  {id:"paint",t:"Paint shop",ic:"🎨",helper:"🧑‍🎨",name:"Frida",bg:"paint",sets:["colors"]},
+  {id:"park",t:"At the park",ic:"🌳",helper:"👧",name:"Lucía",bg:"park",sets:["feelings"]},
+  {id:"forecast",t:"Weather report",ic:"🌦️",helper:"👩‍💼",name:"Ana, la meteoróloga",bg:"park",sets:["weather"]}
 ];
 const SET_SCENE={fruits:"market",veg:"market",office:"office",electronics:"techstore",mechanic:"garage",kitchen:"kitchen",drinks:"kitchen",
-  restaurant:"restaurant",food:"restaurant",house:"home",clothes:"shop",store:"shop",animals:"farm",transport:"street",colors:"paint",basics:"home",body:"home"};
+  restaurant:"restaurant",food:"restaurant",house:"home",clothes:"shop",store:"shop",animals:"farm",transport:"street",colors:"paint",basics:"home",body:"home",feelings:"park",weather:"forecast"};
 function findPrompt(c){
+  if(c[5]==="adj"){ const a=c[1].startsWith("tengo")?[`¿Quién dice: ${c[1]}?`,`Busca a alguien que dice: ${c[1]}.`]:[`¿Quién está ${c[1]}?`,`Busca a alguien que está ${c[1]}.`,`Encuentra la cara: ${c[1]}.`]; return a[Math.floor(Math.random()*a.length)]; }
+  if(c[5]==="phrase"){ const a=[`Toca el dibujo: ${c[1]}.`,`Busca: ${c[1]}.`,`Encuentra: ${c[1]}.`]; return a[Math.floor(Math.random()*a.length)]; }
   const isColor=c[0].startsWith("#"); const w=isColor?"el color "+c[1]:c[1];
   const pl=/^(los|las)\s/.test(c[1]);
   const t=[`¿Dónde ${pl?"están":"está"} ${w}?`,`Encuentra ${w}.`,`Busca ${w}, por favor.`,`¿Me pasas ${w}?`,`Necesito ${w}.`];

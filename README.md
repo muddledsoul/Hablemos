@@ -24,14 +24,14 @@ Keys live only in the phone's browser storage, never in the code/repo.
 - 💡 = suggested next line. ⌨︎ = type instead. **Review** = end-of-session summary + phrases to keep (runs automatically when you leave).
 
 ## Vocabulary (🃏 on the home screen)
-17 picture sets (incl. Car parts & tools). Each set has:
+19 picture sets (incl. Car parts & tools, Feelings, Weather). Each set has:
 - **Learn**: 5 words at a time as flashcards (hear, slow, repeat-after-me), then a quick check until you get them.
 - **Multiple choice**: picture -> word and word -> picture; misses come back.
 - **Matching**: 6 pairs per round, timed (+3s per miss).
 - **Find it**: a helper in a scene asks for an item out loud; tap it (listening).
 - **Name it**: an item lights up in a scene; say it. Scored on accuracy (50), pronunciation (30), speed (20).
 - **Say it**: picture only; cards you say without peeking leave the deck.
-Scenes (market, office, computer store, mechanic shop, kitchen, restaurant, home, clothing store, farm, street, paint shop) are also listed under the sets.
+Scenes (market, office, computer store, mechanic shop, kitchen, restaurant, home, clothing store, farm, street, paint shop, park, weather report) are also listed under the sets.
 
 ## Progress & training (📈 on the home screen)
 - Every session's scores, % correct sentences and minutes are saved after each turn.
