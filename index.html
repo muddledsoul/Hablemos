@@ -200,7 +200,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
 table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,table.conj th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .sprint{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
-.sbtn{border-radius:16px;padding:22px 8px;font-size:24px;font-weight:800;color:#04241c}.sbtn span{font-size:14px;font-weight:600;opacity:.75}
+.sbtn{border-radius:16px;padding:20px 8px;font-size:30px;font-weight:800;color:#04241c;line-height:1.1}.sbtn span{font-size:14px;font-weight:600;opacity:.7;letter-spacing:.04em}
 .sbtn.ser{background:#64b5f6}.sbtn.estar{background:#ffb74d}.sbtn:active{transform:scale(.97)}
 .bigmic{width:76px;height:76px;border-radius:50%;background:var(--accent);display:inline-grid;place-items:center}.bigmic svg{width:32px;height:32px;fill:#04241c}
 .bigmic.rec{background:var(--bad);animation:pulse 1.4s infinite}.bigmic.rec svg{fill:#fff}
@@ -2205,7 +2205,7 @@ function openSerEstar(){
     </div>
     <button class="mode" data-gmode="lesson"><span class="mi">📘</span><span><b>Lesson</b><br><span class="note" style="margin:0">The rules (DOCTOR vs PLACE), conjugations and tricky words</span></span></button>
     <button class="mode" data-gmode="quiz"><span class="mi">🔤</span><span><b>Multiple choice</b><br><span class="note" style="margin:0">Fill the blank with the right form. Every answer explains the rule.</span></span></button>
-    <button class="mode" data-gmode="sprint"><span class="mi">⚡</span><span><b>Ser or Estar sprint</b> · 60s<br><span class="note" style="margin:0">Sort sentences as fast as you can. Streaks multiply your points.</span></span></button>
+    <button class="mode" data-gmode="sprint"><span class="mi">⚡</span><span><b>Ser or Estar sprint</b> · 60s<br><span class="note" style="margin:0">Tap the right form (es / está, soy / estoy…) as fast as you can. Streaks multiply your points.</span></span></button>
     <button class="mode" data-gmode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">See the English, say the whole sentence in Spanish with the right verb</span></span></button>`;
   curSetId=null; $("#setBack").onclick=openGrammar; show("s-set");
 }
@@ -2282,7 +2282,7 @@ function renderSprint(){
   const g=game; if(!g.queue.length) g.queue=shuffle(SE_ITEMS.slice());
   const it=g.queue[0];
   gbody(`<div class="gq" style="min-height:70px">${fillBlank(it[0],"____")}</div><div class="note" style="text-align:center">${esc(it[4])}</div>
-    <div class="sprint"><button class="sbtn ser" data-v="SER">SER<br><span>${esc(isSer(it[1])?it[1]:it[2])}</span></button><button class="sbtn estar" data-v="ESTAR">ESTAR<br><span>${esc(isSer(it[1])?it[2]:it[1])}</span></button></div>
+    <div class="sprint"><button class="sbtn ser" data-v="SER">${esc((isSer(it[1])?it[1]:it[2]).toLowerCase())}<br><span>ser</span></button><button class="sbtn estar" data-v="ESTAR">${esc((isSer(it[1])?it[2]:it[1]).toLowerCase())}<br><span>estar</span></button></div>
     <div id="sMsg" style="min-height:70px"></div>`);
   $("#gameBody").querySelectorAll(".sbtn").forEach(b=>b.onclick=()=>{
     if(g.lock||Date.now()>g.end) return;
