@@ -28,10 +28,13 @@ Keys live only in the phone's browser storage, never in the code/repo.
 - **Learn**: 5 words at a time as flashcards (hear, slow, repeat-after-me), then a quick check until you get them.
 - **Multiple choice**: picture -> word and word -> picture; misses come back.
 - **Matching**: 6 pairs per round, timed (+3s per miss).
-- **Find it**: a helper in a scene asks for an item out loud; tap it (listening).
+- **Find it**: a helper in a scene asks for every word in the set out loud; tap it. Found items disappear and the spot refills until you have found them all.
 - **Name it**: an item lights up in a scene; say it. Scored on accuracy (50), pronunciation (30), speed (20).
 - **Say it**: picture only; cards you say without peeking leave the deck.
 Scenes (market, office, computer store, mechanic shop, kitchen, restaurant, home, clothing store, farm, street, paint shop, park, weather report) are also listed under the sets.
+
+## Grammar (📐 on the home screen)
+- **Ser vs Estar**: Lesson (DOCTOR vs PLACE, conjugations, words whose meaning changes), Multiple choice (20 blanks, each answer explains the rule), 60-second Ser-or-Estar sprint with streak multipliers, and Say it (see English, say the full Spanish sentence; it flags the wrong verb).
 
 ## Progress & training (📈 on the home screen)
 - Every session's scores, % correct sentences and minutes are saved after each turn.

@@ -169,6 +169,8 @@ svg.trend text{fill:var(--muted);font-size:10px}
 .sit{position:absolute;font-size:12cqw;line-height:1;padding:6px;background:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.45));transition:opacity .4s}
 .sit.gone{opacity:0;pointer-events:none}
 .sit.hitok{animation:found .6s forwards}
+.sit.fresh{animation:popin .45s ease-out}
+@keyframes popin{0%{opacity:0;scale:.3}70%{scale:1.15}100%{opacity:1;scale:1}}
 @keyframes found{0%{filter:drop-shadow(0 0 0 #3ddc84)}40%{filter:drop-shadow(0 0 14px #3ddc84)}100%{opacity:0}}
 .sit.hitbad{animation:shake .35s}
 .sit.glow{animation:glow 1s infinite}
@@ -188,6 +190,19 @@ svg.trend text{fill:var(--muted);font-size:10px}
 @keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-8px)}}
 .namebar{display:flex;align-items:center;gap:12px;margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
 .timer{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;min-width:74px}
+.gq{font-size:21px;font-weight:600;text-align:center;line-height:1.4;margin-top:10px}
+.gq b{padding:0 4px;border-bottom:2px solid var(--muted)}.gq b.okc{color:var(--good);border-color:var(--good)}.gq b.errc{color:var(--bad);border-color:var(--bad)}
+.ser-t{color:#64b5f6}.estar-t{color:#ffb74d}
+.rule{margin-top:12px;border-radius:12px;padding:10px 12px;font-size:14.5px;border:1px solid var(--line)}
+.rule.ser{background:#13283a;border-color:#64b5f6}.rule.estar{background:#3a2a13;border-color:#ffb74d}.rule.both{background:#2a1f3a;border-color:#b39ddb}
+.rule b{display:block;margin-bottom:2px}
+table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,table.conj th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.sprint{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.sbtn{border-radius:16px;padding:22px 8px;font-size:24px;font-weight:800;color:#04241c}.sbtn span{font-size:14px;font-weight:600;opacity:.75}
+.sbtn.ser{background:#64b5f6}.sbtn.estar{background:#ffb74d}.sbtn:active{transform:scale(.97)}
+.bigmic{width:76px;height:76px;border-radius:50%;background:var(--accent);display:inline-grid;place-items:center}.bigmic svg{width:32px;height:32px;fill:#04241c}
+.bigmic.rec{background:var(--bad);animation:pulse 1.4s infinite}.bigmic.rec svg{fill:#fff}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
@@ -286,6 +301,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
   <div class="scroll">
     <div id="todayCard"></div>
     <button class="vocabBtn" id="openVocab"><span style="font-size:30px">🃏</span><span><b>Vocabulary flashcards</b><br><span class="note" style="margin:0">Picture cards: say the word in Spanish</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
+    <button class="vocabBtn" id="openGram"><span style="font-size:30px">📐</span><span><b>Grammar</b><br><span class="note" style="margin:0">Ser vs Estar: lesson, quiz, sprint, say it</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
     <label>Or pick any scenario</label>
     <div class="grid" id="scenarios"></div>
     <div id="customWrap" style="display:none">
@@ -333,6 +349,12 @@ svg.trend text{fill:var(--muted);font-size:10px}
       <div class="r" style="flex-direction:column;align-items:center;gap:4px"><button class="side" id="vSkip" aria-label="Skip" style="font-size:20px">⏭</button><span class="note" style="margin:0;font-size:11.5px">Skip</span></div>
     </div>
   </div>
+</section>
+
+<!-- GRAMMAR -->
+<section id="s-gram" class="screen">
+  <header><button class="iconbtn" id="gramBack" aria-label="Back">‹</button><h1>Grammar</h1></header>
+  <div class="scroll" id="gramBody"></div>
 </section>
 
 <!-- VOCAB SET MENU -->
@@ -385,7 +407,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "19 (feelings + weather)";
+const APP_VERSION = "21 (grammar: ser vs estar)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -1529,7 +1551,7 @@ let curSetId=null, game=null;
 const setById=id=>VOCAB.find(s=>s.id===id);
 function smallPic(c){ return c[0].startsWith("#")?`<span class="swatch sm" style="background:${c[0]}"></span>`:`<span class="vpic sm">${c[0]}</span>`; }
 function openSet(id){
-  curSetId=id; game=null; const s=setById(id), n=s.w.length;
+  $("#setBack").onclick=openVocab; curSetId=id; game=null; const s=setById(id), n=s.w.length;
   const st=(V.studied[id]||[]).length, ln=learnedIn(id), b=V.best[id]||{};
   $("#setTitle").textContent=s.ic+" "+s.t;
   $("#setBody").innerHTML=`
@@ -1544,7 +1566,7 @@ function openSet(id){
     <button class="mode" data-mode="learn"><span class="mi">📖</span><span><b>Learn</b><br><span class="note" style="margin:0">See and hear 5 words at a time, then a quick check until you get them</span></span></button>
     <button class="mode" data-mode="quiz"><span class="mi">🔤</span><span><b>Multiple choice</b><br><span class="note" style="margin:0">Pick the right word or picture. Misses come back.</span></span></button>
     <button class="mode" data-mode="match"><span class="mi">🧩</span><span><b>Matching</b><br><span class="note" style="margin:0">Match pictures to words against the clock</span></span></button>
-    <button class="mode" data-mode="find"><span class="mi">🔎</span><span><b>Find it</b><br><span class="note" style="margin:0">Listen: a helper asks for an item, you tap it in a scene</span></span></button>
+    <button class="mode" data-mode="find"><span class="mi">🔎</span><span><b>Find it</b><br><span class="note" style="margin:0">Listen: a helper asks for each item in the set, you tap it in a scene</span></span></button>
     <button class="mode" data-mode="name"><span class="mi">🗣️</span><span><b>Name it</b> · timed<br><span class="note" style="margin:0">An item lights up in a scene, say it fast. Scored on accuracy, pronunciation and speed.</span></span></button>
     <button class="mode" data-mode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">Picture only. Say the word. Cards you get leave the deck.</span></span></button>
     <p class="note" style="text-align:center">Suggested order: Learn → Multiple choice → Matching → Find it → Name it / Say it</p>`;
@@ -1867,17 +1889,31 @@ function renderScenesList(){
   <p class="note" style="margin-top:0">A helper asks for an item out loud. Tap it in the scene.</p>
   <div class="grid">${SCENES.map(sc=>`<button class="card" data-scene="${sc.id}"><div class="ic">${sc.ic}</div><div class="t">${esc(sc.t)}</div><div class="d">${(V.best["scene_"+sc.id]||{}).find!=null?`Best: ${V.best["scene_"+sc.id].find}% first try`:sc.sets.map(s=>setById(s).t).join(" + ")}</div></button>`).join("")}</div>`;
 }
+// Find it goes through EVERY word in the scene's sets. Up to 16 are on screen; each one you
+// find disappears and its spot refills with the next word until you've found them all.
 function startScene(sceneId, onlySet){
   if(needKeys()){ toast("Add your keys first"); openSettings(); return; }
   unlockAudio();
   const sc=SCENES.find(x=>x.id===sceneId);
   const words=(onlySet?[onlySet]:sc.sets).flatMap(id=>setById(id).w);
-  const uniq=[...new Map(words.map(c=>[c[1],c])).values()];
-  const items=shuffle(uniq).slice(0,16);
-  const targets=shuffle(items.slice()).slice(0,Math.min(8,items.length));
-  game={kind:"find", sc, items, targets, t:0, firstTry:0, misses:0, tries:0, showText:false, key:onlySet||("scene_"+sc.id), back:onlySet?()=>openSet(onlySet):openVocab};
+  const all=shuffle([...new Map(words.map(c=>[c[1],c])).values()]);
+  const n=Math.min(16,all.length);
+  game={kind:"find", sc, total:all.length, board:all.slice(0,n), pool:all.slice(n), pos:sceneSlots(n), svg:sceneSVG(sc.bg),
+        cur:null, next:null, foundN:0, firstTry:0, misses:0, tries:0, missed:[], showText:false, fresh:-1,
+        key:onlySet||("scene_"+sc.id), back:onlySet?()=>openSet(onlySet):openVocab};
   gameShell("🔎 "+sc.t, "");
-  renderFind(true);
+  pickFindTarget(); renderFind();
+}
+// Choose the current target (reusing the pre-picked "next" if it's still on the board) and pre-pick the following one.
+function pickFindTarget(){
+  const g=game, on=g.board.filter(Boolean);
+  if(!on.length){ g.cur=null; return; }
+  g.cur=(g.next&&on.includes(g.next))?g.next:on[Math.floor(Math.random()*on.length)];
+  g.prompt=g.nextPrompt&&g.next===g.cur?g.nextPrompt:findPrompt(g.cur);
+  const rest=on.filter(x=>x!==g.cur);
+  g.next=rest.length?rest[Math.floor(Math.random()*rest.length)]:null;
+  g.nextPrompt=g.next?findPrompt(g.next):null;
+  if(g.nextPrompt) prefetch(g.nextPrompt,"-10%");
 }
 function placeItems(n){
   // jittered grid so items don't overlap
@@ -1890,47 +1926,52 @@ function placeItems(n){
   }
   return pos;
 }
-function renderFind(first){
+function renderFind(){
   const g=game;
-  if(g.t>=g.targets.length){
-    const pct=Math.round(100*g.firstTry/g.targets.length), b=V.best[g.key]=V.best[g.key]||{};
+  if(!g.cur){
+    const pct=Math.round(100*g.firstTry/g.total), b=V.best[g.key]=V.best[g.key]||{};
     const rec=b.find==null||pct>b.find; if(rec){ b.find=pct; saveV(); }
     $("#gameSub").textContent="";
-    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":pct>=70?"🎉":"👂"}</div><h2>${pct}% first try</h2>
-      <p class="note">${g.misses} wrong taps. ${rec?"New best!":`Best: ${b.find}%`}</p>
-      <div class="chips" style="justify-content:center;margin:10px 0">${g.targets.map(c=>`<button class="chip" data-say="${esc(c[1])}">${smallPic(c)} ${esc(c[1])}</button>`).join("")}</div>
-      <button class="btn" id="fAgain">New scene</button><div style="height:10px"></div><button class="btn ghost" id="fBack">Back</button></div>`);
+    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":pct>=70?"🎉":"👂"}</div><h2>All ${g.total} found!</h2>
+      <p class="note">${pct}% on the first try · ${g.misses} wrong taps. ${rec?"New best!":`Best: ${b.find}%`}</p>
+      ${g.missed.length?`<div class="note" style="margin-top:6px">Words to review (missed at least once):</div><div class="chips" style="justify-content:center;margin:8px 0">${g.missed.map(c=>`<button class="chip" data-say="${esc(c[1])}">${smallPic(c)} ${esc(c[1])} · ${esc(c[2])}</button>`).join("")}</div>`:""}
+      <button class="btn" id="fAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="fBack">Back</button></div>`);
     $("#fAgain").onclick=()=>startScene(g.sc.id, g.key.startsWith("scene_")?null:g.key); $("#fBack").onclick=g.back;
     return;
   }
-  if(first){ g.pos=sceneSlots(g.items.length); g.found=new Set(); g.svg=sceneSVG(g.sc.bg); }
-  const c=g.targets[g.t]; g.prompts=g.prompts||{}; g.prompt=g.prompts[g.t]||(g.prompts[g.t]=findPrompt(c)); g.tries=0;
-  if(g.t+1<g.targets.length){ g.prompts[g.t+1]=g.prompts[g.t+1]||findPrompt(g.targets[g.t+1]); prefetch(g.prompts[g.t+1],"-10%"); }
-  $("#gameSub").textContent=`Find ${g.t+1} of ${g.targets.length} · ${g.firstTry} first try`;
+  const c=g.cur; g.tries=0;
+  $("#gameSub").textContent=`Found ${g.foundN} of ${g.total} · ${g.firstTry} first try`;
   gbody(`<div class="helper"><span class="hav">${g.sc.helper}</span><div class="bubble"><div class="hn">${esc(g.sc.name)}</div>
       <div class="ht" id="fText" style="${g.showText?"":"filter:blur(6px)"}">${esc(g.prompt)}</div></div></div>
     <div class="row" style="margin:8px 0"><button class="btn ghost" id="fHear">🔊 Hear again</button><button class="btn ghost" id="fShow">${g.showText?"Hide text":"Show text"}</button></div>
-    <div class="scene" id="sceneBox">${g.svg}${g.items.map((it,k)=>{ const p=g.pos[k];
-      return `<button class="sit${g.found.has(it[1])?" gone":""}" data-k="${k}" style="left:${p.x/3}%;top:${p.y/4}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch sc" style="background:${it[0]}"></span>`:it[0]}</button>`; }).join("")}</div>
+    <div class="meter" style="margin:0 0 8px"><i style="width:${Math.round(100*g.foundN/g.total)}%"></i></div>
+    <div class="scene" id="sceneBox">${g.svg}${g.board.map((it,k)=>{ if(!it) return ""; const p=g.pos[k];
+      return `<button class="sit${k===g.fresh?" fresh":""}" data-k="${k}" style="left:${p.x/3}%;top:${p.y/4}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch sc" style="background:${it[0]}"></span>`:it[0]}</button>`; }).join("")}</div>
     <div class="note" id="fMsg" style="text-align:center;min-height:22px;margin-top:8px"></div>`);
+  g.fresh=-1;
   say(g.prompt,"-10%");
   $("#fHear").onclick=()=>say(g.prompt,"-25%");
   $("#fShow").onclick=()=>{ g.showText=!g.showText; $("#fText").style.filter=g.showText?"":"blur(6px)"; $("#fShow").textContent=g.showText?"Hide text":"Show text"; };
   $("#sceneBox").querySelectorAll(".sit").forEach(b=>b.onclick=()=>{
     if(g.lock) return;
-    const it=g.items[+b.dataset.k];
+    const k=+b.dataset.k, it=g.board[k];
     if(it===c){
-      g.lock=true; if(g.tries===0) g.firstTry++;
-      b.classList.add("hitok"); g.found.add(it[1]);
-      $("#fMsg").innerHTML=`<span class="ok">✓ ¡Eso es! ${esc(c[1])}</span> · ${esc(c[2])}`;
+      g.lock=true; g.foundN++; if(g.tries===0) g.firstTry++;
+      b.classList.add("hitok");
+      $("#fMsg").innerHTML=`<span class="ok">✓ ${esc(c[1])}</span> · ${esc(c[2])}`;
       chime(true); $("#player").pause(); sayTok++;
-      setTimeout(()=>{ g.lock=false; g.t++; renderFind(false); },650);
+      setTimeout(()=>{
+        g.lock=false;
+        // refill this spot with the next unseen word
+        g.board[k]=g.pool.length?g.pool.shift():null; if(g.board[k]) g.fresh=k;
+        pickFindTarget(); renderFind();
+      },650);
     } else {
-      g.tries++; g.misses++;
+      g.tries++; g.misses++; if(!g.missed.includes(c)) g.missed.push(c);
       b.classList.add("hitbad"); setTimeout(()=>b.classList.remove("hitbad"),500);
       $("#fMsg").innerHTML=`<span class="err">Eso es ${esc(it[1])}</span> <span class="note">(${esc(it[2])})</span>`;
       chime(false); say("No, eso es "+it[1],"-10%");
-      if(g.tries>=2){ const k=g.items.indexOf(c); const t=$("#sceneBox").querySelector(`[data-k="${k}"]`); if(t) t.classList.add("glow"); }
+      if(g.tries>=2){ const t=$("#sceneBox").querySelector(`[data-k="${g.board.indexOf(c)}"]`); if(t) t.classList.add("glow"); }
     }
   });
 }
@@ -2056,6 +2097,235 @@ function endName(){
     <div style="text-align:left">${R.map(r=>`<div class="hist" style="display:flex;gap:10px;align-items:center">${smallPic(r.c)}<span style="flex:1">${r.ok?"✓":"✗"} <b class="tw" data-w="${esc(r.c[1])}">${esc(r.c[1])}</b>${r.ok?"":` <span class="note">(heard "${esc(r.heard)}")</span>`}</span><span class="note">${r.secs!=null?r.secs.toFixed(1)+"s":"–"} · +${r.s.total}</span></div>`).join("")}</div>
     <div style="height:14px"></div><button class="btn" id="nAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="nBack">Back</button></div>`);
   $("#nAgain").onclick=()=>startName(g.sc.id, g.key.startsWith("scene_")?null:g.key); $("#nBack").onclick=g.back;
+}
+
+/* ---------- Grammar: Ser vs Estar ---------- */
+// [sentence with ___, correct form, wrong form, rule key, English, key word for Say it]
+const SE_ITEMS=[
+ ["Yo ___ de Ohio.","soy","estoy","origin","I'm from Ohio.","ohio"],
+ ["Mi hermana ___ doctora.","es","está","occupation","My sister is a doctor.","doctora"],
+ ["Nosotros ___ americanos.","somos","estamos","origin","We're American.","americanos"],
+ ["La casa ___ grande.","es","está","description","The house is big.","grande"],
+ ["Hoy ___ lunes.","es","está","time","Today is Monday.","lunes"],
+ ["___ las tres de la tarde.","Son","Están","time","It's three in the afternoon.","tres"],
+ ["Él ___ mi esposo.","es","está","relationship","He's my husband.","esposo"],
+ ["Tú ___ muy inteligente.","eres","estás","characteristic","You're very intelligent.","inteligente"],
+ ["La mesa ___ de madera.","es","está","description","The table is made of wood.","madera"],
+ ["La fiesta ___ en mi casa.","es","está","event","The party is at my house.","fiesta"],
+ ["Ellos ___ altos.","son","están","description","They're tall.","altos"],
+ ["Mi carro ___ rojo.","es","está","description","My car is red.","rojo"],
+ ["Yo ___ soldado.","soy","estoy","occupation","I'm a soldier.","soldado"],
+ ["Hoy ___ 17 de octubre.","es","está","time","Today is October 17th.","octubre"],
+ ["Ustedes ___ muy amables.","son","están","characteristic","You all are very kind.","amables"],
+ ["¿De dónde ___ tú?","eres","estás","origin","Where are you from?","donde"],
+ ["El examen ___ difícil.","es","está","characteristic","The exam is difficult.","dificil"],
+ ["Ella ___ mi mejor amiga.","es","está","relationship","She's my best friend.","amiga"],
+ ["La película ___ aburrida.","es","está","tricky","The movie is boring.","aburrida"],
+ ["Él ___ muy listo.","es","está","tricky","He's very smart.","listo"],
+ ["Yo ___ cansado.","estoy","soy","condition","I'm tired.","cansado"],
+ ["El baño ___ al fondo.","está","es","location","The bathroom is at the back.","fondo"],
+ ["Nosotros ___ en Alexandria.","estamos","somos","location","We're in Alexandria.","alexandria"],
+ ["Mi mamá ___ enferma.","está","es","condition","My mom is sick.","enferma"],
+ ["¿Cómo ___ tú?","estás","eres","condition","How are you?","como"],
+ ["Ellos ___ comiendo.","están","son","action","They're eating.","comiendo"],
+ ["La sopa ___ fría.","está","es","condition","The soup is cold.","fria"],
+ ["Yo ___ muy feliz hoy.","estoy","soy","emotion","I'm very happy today.","feliz"],
+ ["El banco ___ cerrado.","está","es","condition","The bank is closed.","cerrado"],
+ ["Tú ___ hablando muy rápido.","estás","eres","action","You're talking very fast.","hablando"],
+ ["Las llaves ___ en la mesa.","están","son","location","The keys are on the table.","mesa"],
+ ["Ella ___ nerviosa por el examen.","está","es","emotion","She's nervous about the exam.","nerviosa"],
+ ["La puerta ___ abierta.","está","es","condition","The door is open.","abierta"],
+ ["Yo ___ aburrido.","estoy","soy","tricky","I'm bored.","aburrido"],
+ ["Mi hermano ___ en el trabajo.","está","es","location","My brother is at work.","trabajo"],
+ ["El café ___ muy rico.","está","es","tricky","The coffee tastes really good.","rico"],
+ ["¿Dónde ___ el hotel?","está","es","location","Where is the hotel?","hotel"],
+ ["Nosotros ___ listos para salir.","estamos","somos","tricky","We're ready to leave.","listos"],
+ ["Él ___ preocupado.","está","es","emotion","He's worried.","preocupado"],
+ ["Ustedes ___ estudiando español.","están","son","action","You all are studying Spanish.","estudiando"],
+ ["La comida ___ lista.","está","es","tricky","The food is ready.","lista"],
+ ["Mi esposa ___ muy bonita.","es","está","description","My wife is very pretty.","bonita"]
+];
+const SE_RULES={
+  origin:["SER","Origin & nationality","Where someone or something is from: Soy de Ohio. Somos americanos."],
+  occupation:["SER","Occupation","Jobs and roles: Es doctora. Soy soldado. (No 'un/una' before the job.)"],
+  description:["SER","Description","What something is like by nature: size, color, looks, material: Es grande. Es de madera."],
+  characteristic:["SER","Characteristic","Personality and lasting traits: Eres inteligente. Es difícil."],
+  time:["SER","Time & dates","Days, dates and clock time: Hoy es lunes. Son las tres."],
+  relationship:["SER","Relationship","How people are related: Es mi esposo. Es mi amiga."],
+  event:["SER","Where an EVENT happens","Events take ser even for location: La fiesta es en mi casa."],
+  location:["ESTAR","Location","Where a person or thing is: Estoy en casa. ¿Dónde está el baño?"],
+  condition:["ESTAR","Condition","How something is right now (a state that can change): Estoy cansado. La sopa está fría."],
+  emotion:["ESTAR","Emotion","How you feel: Estoy feliz hoy. Está nerviosa."],
+  action:["ESTAR","Action in progress","estar + -ando/-iendo: Estoy comiendo. Están hablando."],
+  tricky:["BOTH","Meaning changes","Some words mean different things: ser aburrido = boring / estar aburrido = bored; ser listo = smart / estar listo = ready; ser rico = rich / estar rico = tastes good."]
+};
+const GKEY="gram_serestar";
+const isSer=f=>["soy","eres","es","somos","son"].includes(f.toLowerCase());
+function openGrammar(){
+  const b=V.best[GKEY]||{};
+  $("#gramBody").innerHTML=`<p class="note" style="margin-top:0">Grammar topics with a lesson, games and speaking practice.</p>
+    <button class="mode" data-topic="serestar"><span class="mi">⚖️</span><span><b>Ser vs Estar</b><br><span class="note" style="margin:0">Both mean "to be." Learn when to use which.${b.quiz!=null?` Best quiz ${b.quiz}%.`:""}</span></span></button>
+    <p class="note" style="text-align:center">More topics coming (por vs para, past tenses, gustar…). Tell Claude which you want next.</p>`;
+  show("s-gram");
+}
+function openSerEstar(){
+  game=null; const b=V.best[GKEY]||{};
+  $("#setTitle").textContent="⚖️ Ser vs Estar";
+  $("#setBody").innerHTML=`
+    <div class="tiles">
+      <div class="tile"><div class="v">${b.quiz!=null?b.quiz+"%":"–"}</div><div class="k">best multiple choice</div></div>
+      <div class="tile"><div class="v">${b.sprint??"–"}</div><div class="k">best sprint score</div></div>
+      <div class="tile"><div class="v">${b.say!=null?b.say+"%":"–"}</div><div class="k">best Say it</div></div>
+      <div class="tile"><div class="v">${SE_ITEMS.length}</div><div class="k">practice sentences</div></div>
+    </div>
+    <button class="mode" data-gmode="lesson"><span class="mi">📘</span><span><b>Lesson</b><br><span class="note" style="margin:0">The rules (DOCTOR vs PLACE), conjugations and tricky words</span></span></button>
+    <button class="mode" data-gmode="quiz"><span class="mi">🔤</span><span><b>Multiple choice</b><br><span class="note" style="margin:0">Fill the blank with the right form. Every answer explains the rule.</span></span></button>
+    <button class="mode" data-gmode="sprint"><span class="mi">⚡</span><span><b>Ser or Estar sprint</b> · 60s<br><span class="note" style="margin:0">Sort sentences as fast as you can. Streaks multiply your points.</span></span></button>
+    <button class="mode" data-gmode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">See the English, say the whole sentence in Spanish with the right verb</span></span></button>`;
+  curSetId=null; $("#setBack").onclick=openGrammar; show("s-set");
+}
+$("#setBody").addEventListener("click",e=>{
+  const m=e.target.closest("[data-gmode]"); if(!m) return; e.stopPropagation(); unlockAudio();
+  ({lesson:seLesson,quiz:seQuiz,sprint:seSprint,say:seSay})[m.dataset.gmode]();
+},true);
+$("#gramBody").addEventListener("click",e=>{ if(e.target.closest("[data-topic]")) openSerEstar(); });
+$("#gramBack").onclick=goHome;
+$("#openGram").onclick=openGrammar;
+const fillBlank=(s,f,cls="")=>esc(s).replace("___",`<b class="${cls}">${esc(f)}</b>`);
+const seBack=()=>openSerEstar();
+function ruleBox(key){ const r=SE_RULES[key]; return `<div class="rule ${r[0]==="SER"?"ser":r[0]==="ESTAR"?"estar":"both"}"><b>${r[0]} · ${esc(r[1])}</b><div>${esc(r[2])}</div></div>`; }
+
+function seLesson(){
+  game={kind:"lesson", back:seBack};
+  gameShell("📘 Ser vs Estar","");
+  const row=(f,ex)=>`<div class="line" style="display:flex;gap:8px;align-items:center;margin-top:6px"><div class="tx" style="flex:1">${tapWords(ex)}</div><button class="play" data-say="${esc(ex)}">▶︎</button></div>`;
+  gbody(`<div class="sec"><h3>Both mean "to be"</h3><p style="margin:0">Use <b class="ser-t">SER</b> for what something <i>is</i> (identity, lasting traits). Use <b class="estar-t">ESTAR</b> for how or where something <i>is right now</i>.</p>
+    <p class="note">Memory trick: <b>"How you feel and where you are, that is when you use ESTAR."</b></p></div>
+    <div class="sec"><h3>Conjugations (present)</h3><table class="conj"><tr><th></th><th class="ser-t">ser</th><th class="estar-t">estar</th></tr>
+      ${[["yo","soy","estoy"],["tú","eres","estás"],["él / ella / usted","es","está"],["nosotros","somos","estamos"],["ellos / ustedes","son","están"]].map(r=>`<tr><td>${r[0]}</td><td class="tw" data-w="${r[1]}">${r[1]}</td><td class="tw" data-w="${r[2]}">${r[2]}</td></tr>`).join("")}</table>
+      <p class="note">Tap any form to hear it.</p></div>
+    <div class="sec"><h3><span class="ser-t">SER</span> = DOCTOR</h3>
+      ${[["D","Description","La casa es grande."],["O","Occupation","Mi hermana es doctora."],["C","Characteristic","Tú eres muy inteligente."],["T","Time & dates","Hoy es lunes. Son las tres."],["O","Origin","Soy de Ohio."],["R","Relationship","Él es mi esposo."]].map(([l,t,ex])=>`<div style="margin-top:10px"><b class="ser-t">${l}</b> · ${t}${row("ser",ex)}</div>`).join("")}
+      <div style="margin-top:10px"><b class="ser-t">+</b> Where an <b>event</b> happens${row("ser","La fiesta es en mi casa.")}</div></div>
+    <div class="sec"><h3><span class="estar-t">ESTAR</span> = PLACE</h3>
+      ${[["P","Position","Estoy sentado."],["L","Location","El baño está al fondo."],["A","Action in progress (-ando/-iendo)","Estamos comiendo."],["C","Condition","La sopa está fría."],["E","Emotion","Estoy feliz hoy."]].map(([l,t,ex])=>`<div style="margin-top:10px"><b class="estar-t">${l}</b> · ${t}${row("estar",ex)}</div>`).join("")}</div>
+    <div class="sec"><h3>Same word, different meaning</h3>
+      ${[["Es aburrido.","He's boring.","Está aburrido.","He's bored."],["Es listo.","He's smart.","Está listo.","He's ready."],["Es rico.","He's rich.","Está rico.","It tastes good."],["Es malo.","He's bad (a bad person).","Está malo.","He's sick / it's gone bad."],["Es verde.","It's green.","Está verde.","It's unripe."]].map(([a,ae,b,be])=>`<div class="pair"><div>${tapWords(a)}<div class="note" style="margin:0">${ae}</div></div><div>${tapWords(b)}<div class="note" style="margin:0">${be}</div></div></div>`).join("")}</div>
+    <button class="btn" id="lgQuiz">Practice: Multiple choice ›</button>`);
+  $("#lgQuiz").onclick=seQuiz;
+}
+
+function seQuiz(){
+  game={kind:"sequiz", queue:shuffle(SE_ITEMS.slice()).slice(0,20), total:20, firstTry:0, seen:new Set(), back:seBack};
+  gameShell("🔤 Ser vs Estar","");
+  renderSeQuiz();
+}
+function renderSeQuiz(){
+  const g=game;
+  $("#gameSub").textContent=`${g.total-g.queue.length}/${g.total} · ${g.firstTry} right first try`;
+  if(!g.queue.length){
+    const pct=Math.round(100*g.firstTry/g.total), b=V.best[GKEY]=V.best[GKEY]||{}; const rec=b.quiz==null||pct>b.quiz; if(rec){ b.quiz=pct; saveV(); }
+    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":pct>=70?"🎉":"💪"}</div><h2>${pct}% first try</h2><p class="note">${rec?"New best!":`Best: ${b.quiz}%`}</p>
+      <button class="btn" id="gAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="gSprint">Try the Sprint</button><div style="height:10px"></div><button class="btn ghost" id="gBack2">Back</button></div>`);
+    $("#gAgain").onclick=seQuiz; $("#gSprint").onclick=seSprint; $("#gBack2").onclick=seBack; return;
+  }
+  const it=g.queue[0], opts=shuffle([it[1],it[2]]);
+  gbody(`<div class="gq">${fillBlank(it[0],"____")}</div><div class="note" style="text-align:center">${esc(it[4])}</div>
+    <div class="opts" style="grid-template-columns:1fr 1fr;margin-top:14px">${opts.map(o=>`<button class="opt" data-o="${esc(o)}">${esc(o)}</button>`).join("")}</div><div id="gExp"></div>`);
+  $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    if(g.lock) return; g.lock=true;
+    const right=b.dataset.o===it[1];
+    b.classList.add(right?"right":"wrong");
+    if(!right) $("#gameBody").querySelector(`.opt[data-o="${CSS.escape(it[1])}"]`).classList.add("right");
+    if(right&&!g.seen.has(it[0])) g.firstTry++;
+    g.seen.add(it[0]);
+    const full=it[0].replace("___",it[1]);
+    $("#gExp").innerHTML=`<div class="gq" style="font-size:18px;margin-top:14px">${fillBlank(it[0],it[1],"okc")}</div>${ruleBox(it[3])}<button class="btn" id="gNext" style="margin-top:12px">Next ›</button>`;
+    right?chime(true):chime(false); say(full,"-10%");
+    $("#gNext").onclick=()=>{ g.lock=false; g.queue.shift(); if(!right) g.queue.splice(Math.min(g.queue.length,4),0,it); renderSeQuiz(); };
+  });
+}
+
+function seSprint(){
+  game={kind:"sprint", score:0, streak:0, best:0, right:0, wrong:0, end:Date.now()+60000, queue:shuffle(SE_ITEMS.slice()), back:seBack};
+  gameShell("⚡ Ser or Estar sprint","");
+  game.timer=setInterval(()=>{ const g=game; if(!g||g.kind!=="sprint") return; const left=Math.max(0,Math.ceil((g.end-Date.now())/1000));
+    $("#gameSub").textContent=`⏱ ${left}s · ${g.score} pts · streak ${g.streak}`; if(left<=0){ clearInterval(g.timer); endSprint(); } },200);
+  renderSprint();
+}
+function renderSprint(){
+  const g=game; if(!g.queue.length) g.queue=shuffle(SE_ITEMS.slice());
+  const it=g.queue[0];
+  gbody(`<div class="gq" style="min-height:70px">${fillBlank(it[0],"____")}</div><div class="note" style="text-align:center">${esc(it[4])}</div>
+    <div class="sprint"><button class="sbtn ser" data-v="SER">SER<br><span>${esc(isSer(it[1])?it[1]:it[2])}</span></button><button class="sbtn estar" data-v="ESTAR">ESTAR<br><span>${esc(isSer(it[1])?it[2]:it[1])}</span></button></div>
+    <div id="sMsg" style="min-height:70px"></div>`);
+  $("#gameBody").querySelectorAll(".sbtn").forEach(b=>b.onclick=()=>{
+    if(g.lock||Date.now()>g.end) return;
+    const want=isSer(it[1])?"SER":"ESTAR", right=b.dataset.v===want;
+    g.queue.shift();
+    if(right){ g.streak++; g.best=Math.max(g.best,g.streak); g.right++; const mult=1+Math.floor(g.streak/5); g.score+=10*mult; chime(true);
+      $("#sMsg").innerHTML=`<div class="ok" style="text-align:center">+${10*mult}${mult>1?` (x${mult} streak!)`:""}</div>`; setTimeout(()=>{ if(game===g) renderSprint(); },250); }
+    else { g.streak=0; g.wrong++; chime(false); g.lock=true;
+      $("#sMsg").innerHTML=`<div class="gq" style="font-size:17px">${fillBlank(it[0],it[1],"okc")}</div>${ruleBox(it[3])}`;
+      setTimeout(()=>{ g.lock=false; if(game===g&&Date.now()<g.end) renderSprint(); },1800); }
+  });
+}
+function endSprint(){
+  const g=game; const b=V.best[GKEY]=V.best[GKEY]||{}; const rec=b.sprint==null||g.score>b.sprint; if(rec){ b.sprint=g.score; saveV(); }
+  $("#gameSub").textContent="";
+  gbody(`<div class="vdone"><div style="font-size:60px">${rec?"🏆":"⚡"}</div><h2>${g.score} pts</h2>
+    <p class="note">${g.right} right · ${g.wrong} wrong · longest streak ${g.best}. ${rec?"New best!":`Best: ${b.sprint}`}</p>
+    <button class="btn" id="spAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="spBack">Back</button></div>`);
+  $("#spAgain").onclick=seSprint; $("#spBack").onclick=seBack;
+}
+
+function seSay(){
+  game={kind:"sesay", queue:shuffle(SE_ITEMS.slice()).slice(0,12), total:12, good:0, back:seBack};
+  gameShell("🎤 Say it · Ser vs Estar","");
+  renderSeSay();
+}
+function seCheck(it, heard){
+  const h=" "+noAcc(heard)+" ", form=noAcc(it[1]), wrong=noAcc(it[2]), key=noAcc(it[5]);
+  const stem=key.length>4?key.slice(0,-1):key;
+  return {verb:h.includes(" "+form+" "), wrongVerb:h.includes(" "+wrong+" "), key:h.includes(stem)};
+}
+function renderSeSay(){
+  const g=game;
+  $("#gameSub").textContent=`${g.total-g.queue.length+1>g.total?g.total:g.total-g.queue.length+1}/${g.total} · ${g.good} correct`;
+  if(!g.queue.length){
+    const pct=Math.round(100*g.good/g.total), b=V.best[GKEY]=V.best[GKEY]||{}; const rec=b.say==null||pct>b.say; if(rec){ b.say=pct; saveV(); }
+    $("#gameSub").textContent="";
+    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":"🎤"}</div><h2>${g.good}/${g.total} correct</h2><p class="note">${rec?"New best!":`Best: ${b.say}%`}</p>
+      <button class="btn" id="ssAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="ssBack">Back</button></div>`);
+    $("#ssAgain").onclick=seSay; $("#ssBack").onclick=seBack; return;
+  }
+  const it=g.queue[0], full=it[0].replace("___",it[1]); g.tries=g.tries||0;
+  gbody(`<div class="note" style="text-align:center;margin:0">Say this in Spanish:</div><div class="gq" style="margin-top:6px">${esc(it[4])}</div>
+    <div id="ssHint" class="gq" style="font-size:17px;display:none">${tapWords(full)}</div>
+    <div style="text-align:center;margin-top:16px"><button id="ssMic" class="bigmic"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg></button><div class="note" id="ssLbl" style="margin-top:6px">Tap and say the sentence</div></div>
+    <div id="ssRes" class="vres" style="text-align:center"></div>
+    <div class="row" style="margin-top:10px"><button class="btn ghost" id="ssShow">Show answer</button><button class="btn ghost" id="ssSkip">Skip ›</button></div>`);
+  $("#ssShow").onclick=()=>{ g.peek=true; $("#ssHint").style.display="block"; say(full,"-10%"); };
+  $("#ssSkip").onclick=()=>{ g.queue.shift(); g.queue.push(it); g.tries=0; g.peek=false; renderSeSay(); };
+  $("#ssMic").onclick=async()=>{
+    const m=$("#ssMic"); if(m.classList.contains("rec")) return; m.classList.add("rec"); $("#ssLbl").textContent="Listening…"; $("#player").pause();
+    let t=null; try{ t=await listenOnce(); }catch(e){ toast("Mic error: "+e.message,4000); }
+    if(!$("#ssMic")) return; m.classList.remove("rec"); $("#ssLbl").textContent="Tap and say the sentence";
+    if(!t||!t.text){ $("#ssRes").innerHTML=`<span class="note">Didn't hear you. Try again.</span>`; return; }
+    const r=seCheck(it,t.text), ok=r.verb&&r.key; g.tries++;
+    const pr=t.pron!=null?`<span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span>`:"";
+    if(ok){
+      if(g.tries===1&&!g.peek) g.good++;
+      chime(true);
+      $("#ssRes").innerHTML=`<div class="ok" style="font-size:18px">✓ ${esc(full)}</div><div style="margin-top:6px">${pr}</div>${ruleBox(it[3])}<button class="btn" id="ssNext" style="margin-top:10px">Next ›</button>`;
+      $("#ssNext").onclick=()=>{ g.queue.shift(); g.tries=0; g.peek=false; renderSeSay(); };
+    } else {
+      chime(false);
+      const why=r.wrongVerb?`You used <b>${esc(it[2])}</b>. This one needs <b>${esc(it[1])}</b>.`:!r.verb?`Missing the verb <b>${esc(it[1])}</b>.`:`Close! Check the rest of the sentence.`;
+      $("#ssRes").innerHTML=`<div class="err">Heard: "${esc(t.text)}"</div><div class="note">${why}</div><div style="margin-top:6px">${pr}</div>${r.wrongVerb?ruleBox(it[3]):""}`;
+      if(g.tries>=2){ $("#ssHint").style.display="block"; say(full,"-10%"); }
+    }
+  };
 }
 
 /* ---------- tap any Spanish word to hear it ---------- */
