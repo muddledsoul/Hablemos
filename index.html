@@ -302,7 +302,7 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
   <div class="scroll">
     <div id="todayCard"></div>
     <button class="vocabBtn" id="openVocab"><span style="font-size:30px">🃏</span><span><b>Vocabulary flashcards</b><br><span class="note" style="margin:0">Picture cards: say the word in Spanish</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
-    <button class="vocabBtn" id="openGram"><span style="font-size:30px">📐</span><span><b>Grammar</b><br><span class="note" style="margin:0">Ser vs Estar: lesson, quiz, sprint, say it</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
+    <button class="vocabBtn" id="openGram"><span style="font-size:30px">📐</span><span><b>Grammar</b><br><span class="note" style="margin:0">Ser vs Estar · -ando / -iendo (I am ___ing)</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
     <label>Or pick any scenario</label>
     <div class="grid" id="scenarios"></div>
     <div id="customWrap" style="display:none">
@@ -408,7 +408,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "22 (Name it: 3 tries, bouncing highlight)";
+const APP_VERSION = "23 (-ando / -iendo)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -1879,6 +1879,7 @@ const SET_SCENE={fruits:"market",veg:"market",office:"office",electronics:"techs
   restaurant:"restaurant",food:"restaurant",house:"home",clothes:"shop",store:"shop",animals:"farm",transport:"street",colors:"paint",basics:"home",body:"home",feelings:"park",weather:"forecast"};
 function findPrompt(c){
   if(c[5]==="adj"){ const a=c[1].startsWith("tengo")?[`¿Quién dice: ${c[1]}?`,`Busca a alguien que dice: ${c[1]}.`]:[`¿Quién está ${c[1]}?`,`Busca a alguien que está ${c[1]}.`,`Encuentra la cara: ${c[1]}.`]; return a[Math.floor(Math.random()*a.length)]; }
+  if(c[5]==="action"){ const a=[`¿Quién está ${c[1]}?`,`Busca a alguien que está ${c[1]}.`,`Toca a la persona que está ${c[1]}.`]; return a[Math.floor(Math.random()*a.length)]; }
   if(c[5]==="phrase"){ const a=[`Toca el dibujo: ${c[1]}.`,`Busca: ${c[1]}.`,`Encuentra: ${c[1]}.`]; return a[Math.floor(Math.random()*a.length)]; }
   const isColor=c[0].startsWith("#"); const w=isColor?"el color "+c[1]:c[1];
   const pl=/^(los|las)\s/.test(c[1]);
@@ -2179,6 +2180,7 @@ function openGrammar(){
   const b=V.best[GKEY]||{};
   $("#gramBody").innerHTML=`<p class="note" style="margin-top:0">Grammar topics with a lesson, games and speaking practice.</p>
     <button class="mode" data-topic="serestar"><span class="mi">⚖️</span><span><b>Ser vs Estar</b><br><span class="note" style="margin:0">Both mean "to be." Learn when to use which.${b.quiz!=null?` Best quiz ${b.quiz}%.`:""}</span></span></button>
+    <button class="mode" data-topic="prog"><span class="mi">🏃</span><span><b>"I am ___ing": -ando / -iendo</b><br><span class="note" style="margin:0">Estoy manejando, estamos comiendo. Lesson, Form it, Say it, action-word scenes.${(V.best.gram_prog||{}).form!=null?` Best Form it ${V.best.gram_prog.form}%.`:""}</span></span></button>
     <p class="note" style="text-align:center">More topics coming (por vs para, past tenses, gustar…). Tell Claude which you want next.</p>`;
   show("s-gram");
 }
@@ -2202,7 +2204,7 @@ $("#setBody").addEventListener("click",e=>{
   const m=e.target.closest("[data-gmode]"); if(!m) return; e.stopPropagation(); unlockAudio();
   ({lesson:seLesson,quiz:seQuiz,sprint:seSprint,say:seSay})[m.dataset.gmode]();
 },true);
-$("#gramBody").addEventListener("click",e=>{ if(e.target.closest("[data-topic]")) openSerEstar(); });
+$("#gramBody").addEventListener("click",e=>{ const t=e.target.closest("[data-topic]"); if(!t) return; t.dataset.topic==="prog"?openProgTopic():openSerEstar(); });
 $("#gramBack").onclick=goHome;
 $("#openGram").onclick=openGrammar;
 const fillBlank=(s,f,cls="")=>esc(s).replace("___",`<b class="${cls}">${esc(f)}</b>`);
@@ -2338,6 +2340,193 @@ function renderSeSay(){
       const why=r.wrongVerb?`You used <b>${esc(it[2])}</b>. This one needs <b>${esc(it[1])}</b>.`:!r.verb?`Missing the verb <b>${esc(it[1])}</b>.`:`Close! Check the rest of the sentence.`;
       $("#ssRes").innerHTML=`<div class="err">Heard: "${esc(t.text)}"</div><div class="note">${why}</div><div style="margin-top:6px">${pr}</div>${r.wrongVerb?ruleBox(it[3]):""}`;
       if(g.tries>=2){ $("#ssHint").style.display="block"; say(full,"-10%"); }
+    }
+  };
+}
+
+/* ---------- Grammar: present progressive (estar + -ando / -iendo) ---------- */
+// {e:emoji, inf, ger, en, x: words after the verb, alts, irr: irregular note}
+const PROG=[
+ {e:"🚗",inf:"manejar",ger:"manejando",en:"driving",alts:"conduciendo"},
+ {e:"🚶",inf:"caminar",ger:"caminando",en:"walking",alts:"andando"},
+ {e:"🥾",inf:"hacer",ger:"haciendo",x:"senderismo",en:"hiking",alts:"caminando en la montaña|senderismo"},
+ {e:"😋",inf:"comer",ger:"comiendo",en:"eating"},
+ {e:"🥤",inf:"tomar",ger:"tomando",en:"drinking",alts:"bebiendo"},
+ {e:"🏃",inf:"correr",ger:"corriendo",en:"running"},
+ {e:"🏊",inf:"nadar",ger:"nadando",en:"swimming"},
+ {e:"😴",inf:"dormir",ger:"durmiendo",en:"sleeping",irr:"o → u: dormir → durmiendo"},
+ {e:"📖",inf:"leer",ger:"leyendo",en:"reading",irr:"i → y between vowels: leer → leyendo"},
+ {e:"✍️",inf:"escribir",ger:"escribiendo",en:"writing"},
+ {e:"🧑‍🍳",inf:"cocinar",ger:"cocinando",en:"cooking"},
+ {e:"🧹",inf:"limpiar",ger:"limpiando",en:"cleaning",alts:"barriendo"},
+ {e:"💃",inf:"bailar",ger:"bailando",en:"dancing"},
+ {e:"🧑‍🎤",inf:"cantar",ger:"cantando",en:"singing"},
+ {e:"📞",inf:"hablar",ger:"hablando",x:"por teléfono",en:"talking on the phone",alts:"hablando"},
+ {e:"🧑‍💻",inf:"trabajar",ger:"trabajando",en:"working"},
+ {e:"🛒",inf:"hacer",ger:"haciendo",x:"las compras",en:"shopping (groceries)",alts:"comprando|de compras|haciendo el súper"},
+ {e:"🎮",inf:"jugar",ger:"jugando",en:"playing",alts:"jugando videojuegos"},
+ {e:"📺",inf:"ver",ger:"viendo",x:"la tele",en:"watching TV",alts:"viendo|mirando la tele|mirando"},
+ {e:"🎧",inf:"escuchar",ger:"escuchando",x:"música",en:"listening to music",alts:"escuchando|oyendo música"},
+ {e:"🚴",inf:"andar",ger:"andando",x:"en bicicleta",en:"riding a bike",alts:"montando en bicicleta|en bici|andando en bici"},
+ {e:"🧗",inf:"escalar",ger:"escalando",en:"climbing"},
+ {e:"🏋️",inf:"hacer",ger:"haciendo",x:"ejercicio",en:"working out",alts:"entrenando|levantando pesas|ejercicio"},
+ {e:"🎣",inf:"pescar",ger:"pescando",en:"fishing"},
+ {e:"✈️",inf:"viajar",ger:"viajando",en:"traveling"},
+ {e:"🧑‍🎓",inf:"estudiar",ger:"estudiando",en:"studying"},
+ {e:"😂",inf:"reír",ger:"riendo",en:"laughing",irr:"reír → riendo (drops the í)"},
+ {e:"😭",inf:"llorar",ger:"llorando",en:"crying"},
+ {e:"🤔",inf:"pensar",ger:"pensando",en:"thinking"},
+ {e:"⏳",inf:"esperar",ger:"esperando",en:"waiting"},
+ {e:"🧺",inf:"lavar",ger:"lavando",x:"la ropa",en:"doing laundry",alts:"lavando"},
+ {e:"🙋",inf:"pedir",ger:"pidiendo",en:"asking for / ordering",irr:"e → i: pedir → pidiendo"},
+ {e:"💬",inf:"decir",ger:"diciendo",en:"saying",irr:"e → i: decir → diciendo"},
+ {e:"🧳",inf:"ir",ger:"yendo",en:"going",irr:"ir → yendo (fully irregular). 'Voy' is more common: Voy al trabajo."},
+ {e:"👂",inf:"oír",ger:"oyendo",en:"hearing",irr:"i → y: oír → oyendo"},
+ {e:"📦",inf:"traer",ger:"trayendo",en:"bringing",irr:"i → y: traer → trayendo"},
+ {e:"🫗",inf:"servir",ger:"sirviendo",en:"serving / pouring",irr:"e → i: servir → sirviendo"},
+ {e:"🏄",inf:"surfear",ger:"surfeando",en:"surfing"},
+ {e:"⛷️",inf:"esquiar",ger:"esquiando",en:"skiing"},
+ {e:"🧘",inf:"meditar",ger:"meditando",en:"meditating"}
+];
+const progPhrase=v=>v.ger+(v.x?" "+v.x:"");
+// Feed the action words into the vocab system so every vocab mode and scene works with them.
+VOCAB.push({id:"actions",ic:"🏃",t:"Actions (-ando / -iendo)",w:PROG.map(v=>[v.e,progPhrase(v),v.en,v.alts||"",`${v.inf} → ${v.ger}${v.irr?" · irregular: "+v.irr:""}. Estoy ${progPhrase(v)} = I'm ${v.en}.`,"action"])});
+SCENES.push({id:"plaza",t:"Busy plaza",ic:"🏙️",helper:"🧑‍🦱",name:"Mateo",bg:"park",sets:["actions"]});
+SET_SCENE.actions="plaza";
+
+const PKEYG="gram_prog";
+const ESTAR_F=[["yo","estoy","I'm"],["tú","estás","You're"],["él","está","He's"],["ella","está","She's"],["nosotros","estamos","We're"],["ellos","están","They're"]];
+function openProgTopic(){
+  game=null; const b=V.best[PKEYG]||{};
+  $("#setTitle").textContent="🏃 -ando / -iendo";
+  $("#setBody").innerHTML=`
+    <div class="tiles">
+      <div class="tile"><div class="v">${b.form!=null?b.form+"%":"–"}</div><div class="k">best Form it</div></div>
+      <div class="tile"><div class="v">${b.say!=null?b.say+"%":"–"}</div><div class="k">best Say it</div></div>
+    </div>
+    <button class="mode" data-pmode="lesson"><span class="mi">📘</span><span><b>Lesson</b><br><span class="note" style="margin:0">How to say "I am ___ing": estar + -ando / -iendo, plus the irregular ones</span></span></button>
+    <button class="mode" data-pmode="form"><span class="mi">🔧</span><span><b>Form it</b><br><span class="note" style="margin:0">See the verb, pick the right -ing form. Watch for the irregulars.</span></span></button>
+    <button class="mode" data-pmode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">See "I'm driving", say "Estoy manejando"</span></span></button>
+    <button class="mode" data-pmode="words"><span class="mi">🏙️</span><span><b>Action words + scenes</b><br><span class="note" style="margin:0">${PROG.length} activities with Learn, quizzes, Matching, Find it and Name it in a busy plaza</span></span></button>`;
+  curSetId=null; $("#setBack").onclick=openGrammar; show("s-set");
+}
+$("#setBody").addEventListener("click",e=>{
+  const m=e.target.closest("[data-pmode]"); if(!m) return; e.stopPropagation(); unlockAudio();
+  ({lesson:pgLesson,form:pgForm,say:pgSay,words:()=>openSet("actions")})[m.dataset.pmode]();
+},true);
+const pgBack=()=>openProgTopic();
+
+function pgLesson(){
+  game={kind:"lesson",back:pgBack}; gameShell("📘 -ando / -iendo","");
+  const ex=s=>`<div class="line" style="display:flex;gap:8px;align-items:center;margin-top:6px"><div class="tx" style="flex:1">${tapWords(s)}</div><button class="play" data-say="${esc(s)}">▶︎</button></div>`;
+  gbody(`<div class="sec"><h3>"I am ___ing" = estar + gerund</h3>
+      <p style="margin:0">Spanish builds "-ing" with <b class="estar-t">estar</b> plus a verb ending in <b>-ando</b> or <b>-iendo</b>. Use it for something happening <i>right now</i>.</p>
+      ${ex("Estoy manejando.")}<div class="note" style="margin:0">I'm driving.</div>${ex("Estamos comiendo.")}<div class="note" style="margin:0">We're eating.</div></div>
+    <div class="sec"><h3>Step 1 · estar</h3><table class="conj">${ESTAR_F.map(([p,f,en])=>`<tr><td>${p}</td><td class="tw estar-t" data-w="${f}">${f}</td><td class="note">${en}…</td></tr>`).join("")}</table></div>
+    <div class="sec"><h3>Step 2 · the ending</h3>
+      <table class="conj"><tr><th>verb ends in</th><th>drop it, add</th><th>example</th></tr>
+      <tr><td><b>-ar</b></td><td><b>-ando</b></td><td class="tw" data-w="hablando">hablar → habl<b>ando</b></td></tr>
+      <tr><td><b>-er</b></td><td><b>-iendo</b></td><td class="tw" data-w="comiendo">comer → com<b>iendo</b></td></tr>
+      <tr><td><b>-ir</b></td><td><b>-iendo</b></td><td class="tw" data-w="escribiendo">escribir → escrib<b>iendo</b></td></tr></table>
+      <p class="note">About "-endo": there's no plain -endo ending. You only see "-yendo", when the stem ends in a vowel (leer → le<b>yendo</b>, ir → <b>yendo</b>).</p></div>
+    <div class="sec"><h3>Irregulars to memorize</h3>
+      <div class="note" style="margin-top:0">i → y (vowel before the ending)</div>
+      ${[["leer","leyendo"],["oír","oyendo"],["traer","trayendo"],["creer","creyendo"],["ir","yendo"]].map(([a,b])=>`<div class="pair" style="grid-template-columns:1fr 1fr"><span>${a}</span><b class="tw" data-w="${b}">${b}</b></div>`).join("")}
+      <div class="note">e → i (-ir verbs)</div>
+      ${[["pedir","pidiendo"],["decir","diciendo"],["servir","sirviendo"],["sentir","sintiendo"],["venir","viniendo"],["seguir","siguiendo"],["reír","riendo"]].map(([a,b])=>`<div class="pair" style="grid-template-columns:1fr 1fr"><span>${a}</span><b class="tw" data-w="${b}">${b}</b></div>`).join("")}
+      <div class="note">o → u</div>
+      ${[["dormir","durmiendo"],["morir","muriendo"],["poder","pudiendo"]].map(([a,b])=>`<div class="pair" style="grid-template-columns:1fr 1fr"><span>${a}</span><b class="tw" data-w="${b}">${b}</b></div>`).join("")}</div>
+    <div class="sec"><h3>Heads up</h3>
+      <p style="margin:0">English uses "-ing" for the future ("I'm leaving tomorrow"). Spanish doesn't: use the plain present or <i>ir a</i>.</p>
+      ${ex("Mañana salgo.")}<div class="note" style="margin:0">I'm leaving tomorrow.</div>${ex("Voy a trabajar mañana.")}<div class="note" style="margin:0">I'm going to work tomorrow.</div></div>
+    <div class="sec"><h3>Useful ones</h3><div class="chips">${PROG.slice(0,16).map(v=>`<button class="chip" data-say="Estoy ${esc(progPhrase(v))}">${v.e} ${esc(progPhrase(v))}</button>`).join("")}</div></div>
+    <button class="btn" id="pgToForm">Practice: Form it ›</button>`);
+  $("#pgToForm").onclick=pgForm;
+}
+
+function wrongGerunds(v){
+  const inf=v.inf, end=inf.slice(-2).replace("í","i"), stem=inf.slice(0,-2);
+  const c=[stem+"ando",stem+"iendo",stem+"endo",inf+"ndo",stem+"yendo"];
+  if(v.irr) c.push(stem+"iendo");
+  return shuffle([...new Set(c)].filter(x=>x!==v.ger&&x.length>3)).slice(0,3);
+}
+function pgForm(){
+  const pool=shuffle(PROG.filter((v,i,a)=>a.findIndex(z=>z.ger===v.ger)===i));
+  game={kind:"pgform",queue:pool.slice(0,15),total:15,firstTry:0,seen:new Set(),back:pgBack};
+  gameShell("🔧 Form it","");
+  renderPgForm();
+}
+function renderPgForm(){
+  const g=game;
+  $("#gameSub").textContent=`${g.total-g.queue.length}/${g.total} · ${g.firstTry} right first try`;
+  if(!g.queue.length){
+    const pct=Math.round(100*g.firstTry/g.total), b=V.best[PKEYG]=V.best[PKEYG]||{}; const rec=b.form==null||pct>b.form; if(rec){ b.form=pct; saveV(); }
+    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":"🔧"}</div><h2>${pct}% first try</h2><p class="note">${rec?"New best!":`Best: ${b.form}%`}</p>
+      <button class="btn" id="pfAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="pfSay">Try Say it</button><div style="height:10px"></div><button class="btn ghost" id="pfBack">Back</button></div>`);
+    $("#pfAgain").onclick=pgForm; $("#pfSay").onclick=pgSay; $("#pfBack").onclick=pgBack; return;
+  }
+  const v=g.queue[0], subj=ESTAR_F[Math.floor(Math.random()*ESTAR_F.length)];
+  const opts=shuffle([v.ger].concat(wrongGerunds(v)));
+  gbody(`<div style="text-align:center;font-size:64px">${v.e}</div>
+    <div class="gq"><span class="note" style="font-size:15px">${esc(v.inf)}</span><br>${esc(cap(subj[0]))} <span class="estar-t">${subj[1]}</span> <b>____</b>${v.x?" "+esc(v.x):""}.</div>
+    <div class="note" style="text-align:center">${esc(subj[2])} ${esc(v.en)}.</div>
+    <div class="opts" style="grid-template-columns:1fr 1fr;margin-top:14px">${opts.map(o=>`<button class="opt" data-o="${esc(o)}">${esc(o)}</button>`).join("")}</div><div id="pfExp"></div>`);
+  $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    if(g.lock) return; g.lock=true;
+    const right=b.dataset.o===v.ger; b.classList.add(right?"right":"wrong");
+    if(!right) $("#gameBody").querySelector(`.opt[data-o="${CSS.escape(v.ger)}"]`).classList.add("right");
+    if(right&&!g.seen.has(v.ger)) g.firstTry++; g.seen.add(v.ger);
+    const full=`${cap(subj[0])} ${subj[1]} ${progPhrase(v)}.`;
+    const rule=v.irr?`Irregular · ${v.irr}`:(/ar$/.test(v.inf)?`-ar → -ando: ${v.inf} → ${v.ger}`:`-er / -ir → -iendo: ${v.inf} → ${v.ger}`);
+    $("#pfExp").innerHTML=`<div class="rule ${v.irr?"both":"estar"}"><b>${esc(full)}</b><div>${esc(rule)}</div></div><button class="btn" id="pfNext" style="margin-top:12px">Next ›</button>`;
+    right?chime(true):chime(false); say(full,"-10%");
+    $("#pfNext").onclick=()=>{ g.lock=false; g.queue.shift(); if(!right) g.queue.splice(Math.min(g.queue.length,4),0,v); renderPgForm(); };
+  });
+}
+
+function pgSay(){
+  const items=shuffle(PROG.slice()).slice(0,12).map(v=>({v,s:ESTAR_F[Math.floor(Math.random()*ESTAR_F.length)]}));
+  game={kind:"pgsay",queue:items,total:items.length,good:0,back:pgBack};
+  gameShell("🎤 Say it · -ando / -iendo","");
+  renderPgSay();
+}
+function renderPgSay(){
+  const g=game;
+  if(!g.queue.length){
+    const pct=Math.round(100*g.good/g.total), b=V.best[PKEYG]=V.best[PKEYG]||{}; const rec=b.say==null||pct>b.say; if(rec){ b.say=pct; saveV(); }
+    $("#gameSub").textContent="";
+    gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":"🎤"}</div><h2>${g.good}/${g.total} correct</h2><p class="note">${rec?"New best!":`Best: ${b.say}%`}</p>
+      <button class="btn" id="psAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="psBack">Back</button></div>`);
+    $("#psAgain").onclick=pgSay; $("#psBack").onclick=pgBack; return;
+  }
+  $("#gameSub").textContent=`${g.total-g.queue.length+1}/${g.total} · ${g.good} correct`;
+  const {v,s}=g.queue[0], full=`${s[1].charAt(0).toUpperCase()+s[1].slice(1)} ${progPhrase(v)}.`; g.tries=g.tries||0;
+  gbody(`<div style="text-align:center;font-size:64px">${v.e}</div><div class="note" style="text-align:center;margin:0">Say this in Spanish:</div><div class="gq" style="margin-top:6px">${esc(s[2])} ${esc(v.en)}.</div>
+    <div id="psHint" class="gq" style="font-size:17px;display:none">${tapWords(full)}</div>
+    <div style="text-align:center;margin-top:14px"><button id="psMic" class="bigmic"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg></button><div class="note" id="psLbl" style="margin-top:6px">Tap and say it</div></div>
+    <div id="psRes" class="vres" style="text-align:center"></div>
+    <div class="row" style="margin-top:10px"><button class="btn ghost" id="psShow">Show answer</button><button class="btn ghost" id="psSkip">Skip ›</button></div>`);
+  const next=()=>{ g.queue.shift(); g.tries=0; g.peek=false; renderPgSay(); };
+  $("#psShow").onclick=()=>{ g.peek=true; $("#psHint").style.display="block"; say(full,"-10%"); };
+  $("#psSkip").onclick=()=>{ g.queue.push(g.queue.shift()); g.tries=0; g.peek=false; renderPgSay(); };
+  $("#psMic").onclick=async()=>{
+    const m=$("#psMic"); if(m.classList.contains("rec")) return; m.classList.add("rec"); $("#psLbl").textContent="Listening…"; $("#player").pause();
+    let t=null; try{ t=await listenOnce(); }catch(e){ toast("Mic error: "+e.message,4000); }
+    if(!$("#psMic")) return; m.classList.remove("rec"); $("#psLbl").textContent="Tap and say it";
+    if(!t||!t.text){ $("#psRes").innerHTML=`<span class="note">Didn't hear you. Try again.</span>`; return; }
+    const h=" "+noAcc(t.text)+" ", verbOK=h.includes(" "+noAcc(s[1])+" ");
+    const gerOK=[v.ger].concat((v.alts||"").split("|").filter(Boolean)).some(x=>h.includes(noAcc(x.split(" ")[0])));
+    const pr=t.pron!=null?`<span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span>`:"";
+    g.tries++;
+    if(verbOK&&gerOK){
+      if(g.tries===1&&!g.peek) g.good++; chime(true);
+      $("#psRes").innerHTML=`<div class="ok" style="font-size:18px">✓ ${esc(full)}</div><div style="margin-top:6px">${pr}</div><button class="btn" id="psNext" style="margin-top:10px">Next ›</button>`;
+      $("#psNext").onclick=next;
+    } else {
+      chime(false);
+      const why=!verbOK?`Start with the estar form <b>${esc(s[1])}</b> (${esc(s[2])}).`:`Use the -ing form <b>${esc(v.ger)}</b> (${esc(v.inf)} → ${esc(v.ger)}).`;
+      $("#psRes").innerHTML=`<div class="err">Heard: "${esc(t.text)}"</div><div class="note">${why}</div><div style="margin-top:6px">${pr}</div>`;
+      if(g.tries>=2){ $("#psHint").style.display="block"; say(full,"-10%"); }
     }
   };
 }

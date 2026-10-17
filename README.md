@@ -24,7 +24,7 @@ Keys live only in the phone's browser storage, never in the code/repo.
 - 💡 = suggested next line. ⌨︎ = type instead. **Review** = end-of-session summary + phrases to keep (runs automatically when you leave).
 
 ## Vocabulary (🃏 on the home screen)
-19 picture sets (incl. Car parts & tools, Feelings, Weather). Each set has:
+20 picture sets (incl. Car parts & tools, Feelings, Weather, Actions). Each set has:
 - **Learn**: 5 words at a time as flashcards (hear, slow, repeat-after-me), then a quick check until you get them.
 - **Multiple choice**: picture -> word and word -> picture; misses come back.
 - **Matching**: 6 pairs per round, timed (+3s per miss).
@@ -35,6 +35,7 @@ Scenes (market, office, computer store, mechanic shop, kitchen, restaurant, home
 
 ## Grammar (📐 on the home screen)
 - **Ser vs Estar**: Lesson (DOCTOR vs PLACE, conjugations, words whose meaning changes), Multiple choice (20 blanks, each answer explains the rule), 60-second Ser-or-Estar sprint with streak multipliers, and Say it (see English, say the full Spanish sentence; it flags the wrong verb).
+- **-ando / -iendo (I am ___ing)**: Lesson (estar + gerund, -ar/-er/-ir endings, irregulars like leyendo/durmiendo/pidiendo/yendo), Form it (pick the right -ing form), Say it ("I'm driving" -> "Estoy manejando"), and an Actions vocab set (40 activities) with a Busy plaza scene.
 
 ## Progress & training (📈 on the home screen)
 - Every session's scores, % correct sentences and minutes are saved after each turn.
