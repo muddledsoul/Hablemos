@@ -36,6 +36,7 @@ Scenes (market, office, computer store, mechanic shop, kitchen, restaurant, home
 ## Grammar (📐 on the home screen)
 - **Ser vs Estar**: Lesson (DOCTOR vs PLACE, conjugations, words whose meaning changes), Multiple choice (20 blanks, each answer explains the rule), 60-second Ser-or-Estar sprint with streak multipliers, and Say it (see English, say the full Spanish sentence; it flags the wrong verb).
 - **-ando / -iendo (I am ___ing)**: Lesson (estar + gerund, -ar/-er/-ir endings, irregulars like leyendo/durmiendo/pidiendo/yendo), Form it (pick the right -ing form), Say it ("I'm driving" -> "Estoy manejando"), and an Actions vocab set (40 activities) with a Busy plaza scene.
+- **Where is it? (location)**: 15 phrases (encima de, arriba de, debajo de, al lado de, enfrente de, detrás de, dentro de, entre, cerca de, lejos de, a la derecha / izquierda de, aquí / ahí / allá) with drawn pictures. Lesson (incl. de + el = del), ¿Dónde está? quiz, Listen & tap, Say it.
 
 ## Progress & training (📈 on the home screen)
 - Every session's scores, % correct sentences and minutes are saved after each turn.

@@ -204,6 +204,14 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
 .sbtn.ser{background:#64b5f6}.sbtn.estar{background:#ffb74d}.sbtn:active{transform:scale(.97)}
 .bigmic{width:76px;height:76px;border-radius:50%;background:var(--accent);display:inline-grid;place-items:center}.bigmic svg{width:32px;height:32px;fill:#04241c}
 .bigmic.rec{background:var(--bad);animation:pulse 1.4s infinite}.bigmic.rec svg{fill:#fff}
+.lstage{position:relative;width:100%;aspect-ratio:300/190;border-radius:14px;overflow:hidden;background:linear-gradient(#d6efff 0 70%,#c5e1a5 70%);container-type:inline-size;border:1px solid var(--line)}
+.lstage.small{border-radius:10px}
+.lground{position:absolute;left:0;right:0;top:70%;height:2px;background:#9ccc65}
+.lem{position:absolute;transform:translate(-50%,-50%);line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
+.ldash{position:absolute;width:0;border-left:2px dashed #78909c;transform:translateX(-50%)}
+.lmark{position:absolute;top:84%;width:6px;height:6px;border-radius:50%;background:#546e7a;transform:translateX(-50%)}
+.ltag{position:absolute;top:88%;transform:translateX(-50%);font-size:5cqw;color:#37474f;font-weight:700}
+.opt.pic .lstage{pointer-events:none}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
@@ -302,7 +310,7 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
   <div class="scroll">
     <div id="todayCard"></div>
     <button class="vocabBtn" id="openVocab"><span style="font-size:30px">🃏</span><span><b>Vocabulary flashcards</b><br><span class="note" style="margin:0">Picture cards: say the word in Spanish</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
-    <button class="vocabBtn" id="openGram"><span style="font-size:30px">📐</span><span><b>Grammar</b><br><span class="note" style="margin:0">Ser vs Estar · -ando / -iendo (I am ___ing)</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
+    <button class="vocabBtn" id="openGram"><span style="font-size:30px">📐</span><span><b>Grammar</b><br><span class="note" style="margin:0">Ser vs Estar · -ando / -iendo · Where is it?</span></span><span style="margin-left:auto;color:var(--muted)">›</span></button>
     <label>Or pick any scenario</label>
     <div class="grid" id="scenarios"></div>
     <div id="customWrap" style="display:none">
@@ -408,7 +416,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "23 (-ando / -iendo)";
+const APP_VERSION = "24 (where is it?)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -2181,6 +2189,7 @@ function openGrammar(){
   $("#gramBody").innerHTML=`<p class="note" style="margin-top:0">Grammar topics with a lesson, games and speaking practice.</p>
     <button class="mode" data-topic="serestar"><span class="mi">⚖️</span><span><b>Ser vs Estar</b><br><span class="note" style="margin:0">Both mean "to be." Learn when to use which.${b.quiz!=null?` Best quiz ${b.quiz}%.`:""}</span></span></button>
     <button class="mode" data-topic="prog"><span class="mi">🏃</span><span><b>"I am ___ing": -ando / -iendo</b><br><span class="note" style="margin:0">Estoy manejando, estamos comiendo. Lesson, Form it, Say it, action-word scenes.${(V.best.gram_prog||{}).form!=null?` Best Form it ${V.best.gram_prog.form}%.`:""}</span></span></button>
+    <button class="mode" data-topic="loc"><span class="mi">📍</span><span><b>Where is it? Location words</b><br><span class="note" style="margin:0">encima de, debajo de, al lado de, detrás de, cerca / lejos, aquí / ahí / allá…${(V.best.gram_loc||{}).quiz!=null?` Best quiz ${V.best.gram_loc.quiz}%.`:""}</span></span></button>
     <p class="note" style="text-align:center">More topics coming (por vs para, past tenses, gustar…). Tell Claude which you want next.</p>`;
   show("s-gram");
 }
@@ -2204,7 +2213,7 @@ $("#setBody").addEventListener("click",e=>{
   const m=e.target.closest("[data-gmode]"); if(!m) return; e.stopPropagation(); unlockAudio();
   ({lesson:seLesson,quiz:seQuiz,sprint:seSprint,say:seSay})[m.dataset.gmode]();
 },true);
-$("#gramBody").addEventListener("click",e=>{ const t=e.target.closest("[data-topic]"); if(!t) return; t.dataset.topic==="prog"?openProgTopic():openSerEstar(); });
+$("#gramBody").addEventListener("click",e=>{ const t=e.target.closest("[data-topic]"); if(!t) return; ({prog:openProgTopic,loc:openLocTopic,serestar:openSerEstar})[t.dataset.topic](); });
 $("#gramBack").onclick=goHome;
 $("#openGram").onclick=openGrammar;
 const fillBlank=(s,f,cls="")=>esc(s).replace("___",`<b class="${cls}">${esc(f)}</b>`);
@@ -2527,6 +2536,194 @@ function renderPgSay(){
       const why=!verbOK?`Start with the estar form <b>${esc(s[1])}</b> (${esc(s[2])}).`:`Use the -ing form <b>${esc(v.ger)}</b> (${esc(v.inf)} → ${esc(v.ger)}).`;
       $("#psRes").innerHTML=`<div class="err">Heard: "${esc(t.text)}"</div><div class="note">${why}</div><div style="margin-top:6px">${pr}</div>`;
       if(g.tries>=2){ $("#psHint").style.display="block"; say(full,"-10%"); }
+    }
+  };
+}
+
+/* ---------- Grammar: location (where is it?) ---------- */
+// key, Spanish phrase, English, words accepted when speaking, conflict group (never shown together in a quiz)
+const LOC=[
+ {k:"top",es:"encima de",en:"on top of",say:"encima|sobre|arriba",g:"vert"},
+ {k:"above",es:"arriba de",en:"above",say:"arriba|por encima",g:"vert",note:"Encima de = on top (touching). Arriba de = above. In Mexico arriba de is also used for on top."},
+ {k:"under",es:"debajo de",en:"under",say:"debajo|abajo",g:"under"},
+ {k:"beside",es:"al lado de",en:"next to",say:"lado|junto",g:"side"},
+ {k:"front",es:"enfrente de",en:"in front of",say:"enfrente|delante|frente",g:"front"},
+ {k:"behind",es:"detrás de",en:"behind",say:"detras|atras",g:"front"},
+ {k:"inside",es:"dentro de",en:"inside",say:"dentro|adentro",g:"in"},
+ {k:"between",es:"entre",en:"between",say:"entre",g:"between"},
+ {k:"near",es:"cerca de",en:"near",say:"cerca",g:"side"},
+ {k:"far",es:"lejos de",en:"far from",say:"lejos",g:"far"},
+ {k:"right",es:"a la derecha de",en:"to the right of",say:"derecha",g:"side"},
+ {k:"left",es:"a la izquierda de",en:"to the left of",say:"izquierda",g:"side"},
+ {k:"here",es:"aquí",en:"here (by me)",say:"aqui|aca",g:"deictic",note:"aquí / acá = right here by the speaker"},
+ {k:"there",es:"ahí",en:"there (by you)",say:"ahi",g:"deictic",note:"ahí = there, near the person you're talking to"},
+ {k:"overthere",es:"allá",en:"over there (far away)",say:"alla|alli",g:"deictic",note:"allá / allí = over there, far from both of you"}
+];
+const LOC_SUBJ=[["🐱","el gato","the cat"],["🐶","el perro","the dog"],["⚽","la pelota","the ball"],["🔑","las llaves","the keys"],["🎒","la mochila","the backpack"],["📱","el celular","the phone"]];
+// reference objects: emoji, singular, plural-with-dos, which locations make sense
+const LOC_REF=[["📦","la caja","las dos cajas","the box",["top","above","beside","front","behind","inside","between","near","far","right","left"]],
+  ["🚗","el carro","los dos carros","the car",["top","under","beside","front","behind","inside","between","near","far","right","left"]],
+  ["🪑","la silla","las dos sillas","the chair",["top","under","beside","front","behind","between","near","far","right","left"]],
+  ["🛏️","la cama","las dos camas","the bed",["top","under","beside","front","near","far","right","left"]],
+  ["🌳","el árbol","los dos árboles","the tree",["above","under","beside","front","behind","between","near","far","right","left"]],
+  ["🏠","la casa","las dos casas","the house",["above","beside","front","behind","inside","between","near","far","right","left"]]];
+const locBy=k=>LOC.find(l=>l.k===k);
+// Build one question: picture + Spanish + English. "de el" becomes "del".
+function locMake(k){
+  const L=locBy(k), s=LOC_SUBJ[Math.floor(Math.random()*LOC_SUBJ.length)], pl=s[1].startsWith("las ");
+  const verb=pl?"están":"está", Verb=verb.charAt(0).toUpperCase()+verb.slice(1);
+  if(L.g==="deictic"){
+    return {k, s, ref:null, es:`${cap(s[1])} ${verb} ${L.es}.`, en:`${cap(s[2])} ${pl?"are":"is"} ${L.en.replace(/ \(.*\)/,"")}.`};
+  }
+  const refs=LOC_REF.filter(r=>r[4].includes(k)), r=refs[Math.floor(Math.random()*refs.length)];
+  const target=k==="between"?r[2]:r[1];
+  const phrase=(L.es+" "+target).replace(/\bde el\b/,"del");
+  return {k, s, ref:r, es:`${cap(s[1])} ${verb} ${phrase}.`, en:`${cap(s[2])} ${pl?"are":"is"} ${L.en} ${k==="between"?"the two "+r[3].replace("the ","").replace(/x$/,"xe")+"s":r[3]}.`};
+}
+// Draw the little scene (300x190 stage). Positions in %, sizes in stage-width units.
+function locStage(q, small){
+  const em=(e,x,y,size,z=1,extra="")=>`<span class="lem" style="left:${x}%;top:${y}%;font-size:${size}cqw;z-index:${z};${extra}">${e}</span>`;
+  let h=`<div class="lground"></div>`;
+  const S=q.s[0];
+  if(!q.ref){
+    h+=em("🧍",12,62,17,2)+em("👉",23,52,9,3);
+    const pos={here:[33,66,14],there:[58,64,11],overthere:[86,48,7]}[q.k];
+    h+=`<div class="lmark" style="left:${pos[0]}%"></div>`+em(S,pos[0],pos[1],pos[2],2);
+    h+=`<div class="ltag" style="left:31%">aquí</div><div class="ltag" style="left:56%">ahí</div><div class="ltag" style="left:84%">allá</div>`;
+    return `<div class="lstage${small?" small":""}">${h}</div>`;
+  }
+  const R=q.ref[0];
+  const P={
+    top:   [[50,66,26,1],[50,41,13,2]], above:[[50,66,26,1],[50,13,12,2,"opacity:.95"]],
+    under: [[50,52,30,2],[50,80,11,1]], beside:[[44,66,26,1],[66,72,14,2]],
+    front: [[50,62,24,1],[50,78,17,3]], behind:[[50,66,26,2],[57,48,11,1,"filter:brightness(.85)"]],
+    inside:[[50,66,28,1],[50,64,10,2,"opacity:.95"]], near:[[38,66,24,1],[64,72,12,2]],
+    far:   [[14,66,22,1],[90,64,8,2]], right:[[40,66,24,1],[70,72,14,2]], left:[[60,66,24,1],[30,72,14,2]]
+  }[q.k];
+  if(q.k==="between"){ h+=em(R,20,66,22,1)+em(R,80,66,22,1)+em(S,50,72,13,2); }
+  else { const [r,s]=P; h+=em(R,r[0],r[1],r[2],r[3],r[4]||"")+em(S,s[0],s[1],s[2],s[3],s[4]||""); }
+  if(q.k==="inside") h=h.replace(`${R}</span>`,`${R}</span><span class="lem" style="left:50%;top:64%;font-size:28cqw;z-index:3;opacity:.45;clip-path:inset(30% 0 0 0)">${R}</span>`);
+  if(q.k==="above") h+=`<div class="ldash" style="left:50%;top:22%;height:22%"></div>`;
+  return `<div class="lstage${small?" small":""}">${h}</div>`;
+}
+const LKEY="gram_loc";
+function openLocTopic(){
+  game=null; const b=V.best[LKEY]||{};
+  $("#setTitle").textContent="📍 Where is it?";
+  $("#setBody").innerHTML=`
+    <div class="tiles">
+      <div class="tile"><div class="v">${b.quiz!=null?b.quiz+"%":"–"}</div><div class="k">best ¿Dónde está?</div></div>
+      <div class="tile"><div class="v">${b.listen!=null?b.listen+"%":"–"}</div><div class="k">best Listen & tap</div></div>
+      <div class="tile"><div class="v">${b.say!=null?b.say+"%":"–"}</div><div class="k">best Say it</div></div>
+      <div class="tile"><div class="v">${LOC.length}</div><div class="k">location phrases</div></div>
+    </div>
+    <button class="mode" data-lmode="lesson"><span class="mi">📘</span><span><b>Lesson</b><br><span class="note" style="margin:0">Every phrase with a picture: encima de, debajo de, al lado de, aquí / ahí / allá…</span></span></button>
+    <button class="mode" data-lmode="quiz"><span class="mi">🔤</span><span><b>¿Dónde está?</b><br><span class="note" style="margin:0">Look at the picture, pick where it is</span></span></button>
+    <button class="mode" data-lmode="listen"><span class="mi">👂</span><span><b>Listen & tap</b><br><span class="note" style="margin:0">Hear the sentence, tap the matching picture</span></span></button>
+    <button class="mode" data-lmode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">Describe where it is out loud</span></span></button>`;
+  curSetId=null; $("#setBack").onclick=openGrammar; show("s-set");
+}
+$("#setBody").addEventListener("click",e=>{
+  const m=e.target.closest("[data-lmode]"); if(!m) return; e.stopPropagation(); unlockAudio();
+  ({lesson:locLesson,quiz:locQuiz,listen:locListen,say:locSay})[m.dataset.lmode]();
+},true);
+const locBack=()=>openLocTopic();
+function locLesson(){
+  game={kind:"lesson",back:locBack}; gameShell("📘 Where is it?","");
+  const card=k=>{ const q=locMake(k), L=locBy(k);
+    return `<div class="sec">${locStage(q,false)}<div style="margin-top:8px;font-size:19px;font-weight:700">${esc(L.es)} <span class="note" style="font-size:14px;font-weight:400">· ${esc(L.en)}</span></div>
+      <div class="line" style="display:flex;gap:8px;align-items:center;margin-top:4px"><div class="tx" style="flex:1">${tapWords(q.es)}<div class="note" style="margin:0">${esc(q.en)}</div></div><button class="play" data-say="${esc(q.es)}">▶︎</button></div>
+      ${L.note?`<div class="note">${esc(L.note)}</div>`:""}</div>`; };
+  gbody(`<div class="sec"><h3>Use <span class="estar-t">estar</span> for location</h3><p style="margin:0">¿Dónde <b>está</b> el gato? El gato <b>está</b> encima de la caja.</p>
+      <p class="note">Most of these end in <b>de</b>. Watch the contraction: <b>de + el = del</b>: debajo <b>del</b> carro, but debajo <b>de la</b> mesa.</p></div>
+    ${LOC.filter(l=>l.g!=="deictic").map(l=>card(l.k)).join("")}
+    <div class="sec"><h3>Here, there, over there</h3><p class="note" style="margin-top:0">Spanish has three distances, measured from the people talking.</p></div>
+    ${["here","there","overthere"].map(card).join("")}
+    <button class="btn" id="locToQuiz">Practice: ¿Dónde está? ›</button>`);
+  $("#locToQuiz").onclick=locQuiz;
+}
+function locOptions(k,n=4){
+  const L=locBy(k); const pool=L.g==="deictic"?LOC.filter(x=>x.g==="deictic"):LOC.filter(x=>x.g!=="deictic"&&(x.k===k||x.g!==L.g));
+  const others=shuffle(pool.filter(x=>x.k!==k)); const picked=[L], groups=new Set([L.g]);
+  for(const o of others){ if(picked.length>=n) break; if(L.g!=="deictic"&&groups.has(o.g)) continue; picked.push(o); groups.add(o.g); }
+  return shuffle(picked);
+}
+function locQueue(n){ const ks=[]; while(ks.length<n) ks.push(...shuffle(LOC.map(l=>l.k))); return ks.slice(0,n).map(locMake); }
+function locQuiz(){ game={kind:"locquiz",queue:locQueue(15),total:15,firstTry:0,seen:new Set(),back:locBack}; gameShell("🔤 ¿Dónde está?",""); renderLocQuiz(); }
+function locEnd(field,again,label){
+  const g=game, pct=Math.round(100*g.firstTry/g.total), b=V.best[LKEY]=V.best[LKEY]||{}; const rec=b[field]==null||pct>b[field]; if(rec){ b[field]=pct; saveV(); }
+  $("#gameSub").textContent="";
+  gbody(`<div class="vdone"><div style="font-size:60px">${pct>=90?"🏆":"📍"}</div><h2>${pct}% ${label}</h2><p class="note">${rec?"New best!":`Best: ${b[field]}%`}</p>
+    <button class="btn" id="lcAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="lcBack">Back</button></div>`);
+  $("#lcAgain").onclick=again; $("#lcBack").onclick=locBack;
+}
+function renderLocQuiz(){
+  const g=game; $("#gameSub").textContent=`${g.total-g.queue.length}/${g.total} · ${g.firstTry} right first try`;
+  if(!g.queue.length) return locEnd("quiz",locQuiz,"first try");
+  const q=g.queue[0], opts=locOptions(q.k);
+  const subj=`${cap(q.s[1])} ${q.s[1].startsWith("las ")?"están":"está"}`;
+  gbody(`${locStage(q,false)}<div class="gq">¿Dónde ${q.s[1].startsWith("las ")?"están":"está"} ${esc(q.s[1])}?</div>
+    <div class="opts" style="margin-top:10px">${opts.map(o=>`<button class="opt" data-k="${o.k}">${esc(o.es)}</button>`).join("")}</div><div id="lqExp"></div>`);
+  $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    if(g.lock) return; g.lock=true;
+    const right=b.dataset.k===q.k; b.classList.add(right?"right":"wrong");
+    if(!right) $("#gameBody").querySelector(`.opt[data-k="${q.k}"]`).classList.add("right");
+    if(right&&!g.seen.has(g.queue.length)) g.firstTry++; g.seen.add(g.queue.length);
+    $("#lqExp").innerHTML=`<div class="rule estar"><b>${esc(q.es)}</b><div>${esc(q.en)}</div></div><button class="btn" id="lqNext" style="margin-top:10px">Next ›</button>`;
+    right?chime(true):chime(false); say(q.es,"-10%");
+    $("#lqNext").onclick=()=>{ g.lock=false; g.queue.shift(); if(!right) g.queue.splice(Math.min(g.queue.length,4),0,locMake(q.k)); renderLocQuiz(); };
+  });
+}
+function locListen(){ game={kind:"loclisten",queue:locQueue(12),total:12,firstTry:0,back:locBack,showText:false}; gameShell("👂 Listen & tap",""); renderLocListen(); }
+function renderLocListen(){
+  const g=game; $("#gameSub").textContent=`${g.total-g.queue.length}/${g.total} · ${g.firstTry} right first try`;
+  if(!g.queue.length) return locEnd("listen",locListen,"first try");
+  const q=g.queue[0]; g.tries=0;
+  const opts=locOptions(q.k).map(o=>o.k===q.k?q:Object.assign(locMake(o.k),{s:q.s}));
+  gbody(`<div class="helper"><span class="hav">🧑‍🏫</span><div class="bubble"><div class="hn">Profe</div><div class="ht" id="llText" style="${g.showText?"":"filter:blur(6px)"}">${esc(q.es)}</div></div></div>
+    <div class="row" style="margin:8px 0"><button class="btn ghost" id="llHear">🔊 Hear again</button><button class="btn ghost" id="llShow">${g.showText?"Hide text":"Show text"}</button></div>
+    <div class="pgrid">${opts.map((o,i)=>`<button class="opt pic" data-i="${i}" style="padding:4px">${locStage(o,true)}</button>`).join("")}</div><div id="llMsg" class="note" style="text-align:center;min-height:22px;margin-top:8px"></div>`);
+  say(q.es,"-10%");
+  $("#llHear").onclick=()=>say(q.es,"-25%");
+  $("#llShow").onclick=()=>{ g.showText=!g.showText; $("#llText").style.filter=g.showText?"":"blur(6px)"; $("#llShow").textContent=g.showText?"Hide text":"Show text"; };
+  $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    if(g.lock) return; const o=opts[+b.dataset.i];
+    if(o===q){ g.lock=true; if(g.tries===0) g.firstTry++; b.classList.add("right"); chime(true); $("#llMsg").innerHTML=`<span class="ok">✓</span> ${esc(q.en)}`;
+      setTimeout(()=>{ g.lock=false; g.queue.shift(); renderLocListen(); },900); }
+    else { g.tries++; b.classList.add("wrong"); chime(false); $("#llMsg").innerHTML=`<span class="err">That one is: ${esc(o.es)}</span>`; }
+  });
+}
+function locSay(){ game={kind:"locsay",queue:locQueue(10),total:10,firstTry:0,back:locBack}; gameShell("🎤 Say it · Where is it?",""); renderLocSay(); }
+function renderLocSay(){
+  const g=game; $("#gameSub").textContent=`${g.total-g.queue.length+1>g.total?g.total:g.total-g.queue.length+1}/${g.total} · ${g.firstTry} correct`;
+  if(!g.queue.length) return locEnd("say",locSay,"correct");
+  const q=g.queue[0], L=locBy(q.k); g.tries=0; g.peek=false;
+  gbody(`${locStage(q,false)}<div class="gq">¿Dónde ${q.s[1].startsWith("las ")?"están":"está"} ${esc(q.s[1])}?</div>
+    <div id="lsHint" class="gq" style="font-size:17px;display:none">${tapWords(q.es)}</div>
+    <div style="text-align:center;margin-top:12px"><button id="lsMic" class="bigmic"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg></button><div class="note" id="lsLbl" style="margin-top:6px">Tap and answer in a full sentence</div></div>
+    <div id="lsRes" class="vres" style="text-align:center"></div>
+    <div class="row" style="margin-top:10px"><button class="btn ghost" id="lsShow">Show answer</button><button class="btn ghost" id="lsSkip">Skip ›</button></div>`);
+  $("#lsShow").onclick=()=>{ g.peek=true; $("#lsHint").style.display="block"; say(q.es,"-10%"); };
+  $("#lsSkip").onclick=()=>{ g.queue.push(locMake(g.queue.shift().k)); renderLocSay(); };
+  $("#lsMic").onclick=async()=>{
+    const m=$("#lsMic"); if(m.classList.contains("rec")) return; m.classList.add("rec"); $("#lsLbl").textContent="Listening…"; $("#player").pause();
+    let t=null; try{ t=await listenOnce(); }catch(e){ toast("Mic error: "+e.message,4000); }
+    if(!$("#lsMic")) return; m.classList.remove("rec"); $("#lsLbl").textContent="Tap and answer in a full sentence";
+    if(!t||!t.text){ $("#lsRes").innerHTML=`<span class="note">Didn't hear you. Try again.</span>`; return; }
+    const h=" "+noAcc(t.text)+" ";
+    // "next to / near / to the right / to the left" pictures overlap, so accept any of them unless the direction is wrong
+    const sideOk=L.g==="side"&&["lado","junto","cerca","derecha","izquierda"].some(w=>h.includes(" "+w))&&!(q.k==="right"&&h.includes("izquierda"))&&!(q.k==="left"&&h.includes("derecha"));
+    const ok=sideOk||L.say.split("|").some(w=>h.includes(" "+noAcc(w)));
+    const said=LOC.find(x=>x.k!==q.k&&!(sideOk&&x.g==="side")&&x.say.split("|").some(w=>h.includes(" "+noAcc(w))));
+    const pr=t.pron!=null?`<span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span>`:"";
+    g.tries++;
+    if(ok){ if(g.tries===1&&!g.peek) g.firstTry++; chime(true);
+      const delNote=/ del /.test(q.es)&&/ de el /.test(" "+noAcc(t.text)+" ")?`<div class="note">Tip: de + el = <b>del</b>.</div>`:"";
+      $("#lsRes").innerHTML=`<div class="ok" style="font-size:18px">✓ ${esc(q.es)}</div><div class="note">${esc(q.en)}</div>${delNote}<div style="margin-top:6px">${pr}</div><button class="btn" id="lsNext" style="margin-top:10px">Next ›</button>`;
+      $("#lsNext").onclick=()=>{ g.queue.shift(); renderLocSay(); };
+    } else { chime(false);
+      $("#lsRes").innerHTML=`<div class="err">Heard: "${esc(t.text)}"</div><div class="note">${said?`That's <b>${esc(said.es)}</b> (${esc(said.en)}). Look again: it's <b>${esc(L.en)}</b>.`:`Use <b>${esc(L.es)}</b> (${esc(L.en)}).`}</div><div style="margin-top:6px">${pr}</div>`;
+      if(g.tries>=2){ $("#lsHint").style.display="block"; say(q.es,"-10%"); }
     }
   };
 }
