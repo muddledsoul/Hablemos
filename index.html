@@ -212,6 +212,12 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
 .lmark{position:absolute;top:84%;width:6px;height:6px;border-radius:50%;background:#546e7a;transform:translateX(-50%)}
 .ltag{position:absolute;top:88%;transform:translateX(-50%);font-size:5cqw;color:#37474f;font-weight:700}
 .opt.pic .lstage{pointer-events:none}
+.howto{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-top:10px}
+.howto summary{font-weight:700;cursor:pointer}.howto ul{margin:6px 0 10px;padding-left:18px;font-size:14px;color:#c9d6de}.howto li{margin-bottom:4px}
+.phon-big{font-size:22px;font-weight:800;color:var(--accent);margin-top:8px;letter-spacing:.02em}
+.pchip{display:inline-block;padding:4px 9px;border-radius:16px;background:var(--panel2);font-weight:600;border:1px solid var(--line)}
+.pchip small{opacity:.7;font-weight:700}.pchip.g{color:var(--good)}.pchip.o{color:var(--ok)}.pchip.b{color:var(--bad)}
+.pfix{background:#121b21;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:14.5px}.pfix ul{margin:6px 0 0;padding-left:18px;color:#c9d6de}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
@@ -1323,6 +1329,132 @@ async function importP(e){
   }catch(err){ toast("Import failed: "+err.message,4000); }
 }
 
+/* ---------- pronunciation helper: syllables, stress, phonetic respelling, tips ---------- */
+const SP_V="aeiouáéíóúü", SP_STRONG="aeoáéó", SP_ACC="áéíóú";
+function spUnits(w){
+  const u=[]; let i=0;
+  while(i<w.length){
+    const c=w[i], nx=w[i+1]||"", nx2=w[i+2]||"";
+    if(SP_V.includes(c)){ u.push({v:1,s:c}); i++; continue; }
+    if(c==="y"&&(i===w.length-1)&&i>0&&SP_V.includes(w[i-1])){ u.push({v:1,s:"i",y:1}); i++; continue; }
+    if(c==="y"&&w.length===1){ u.push({v:1,s:"i"}); i++; continue; }
+    const two=c+nx;
+    if(["ch","ll","rr"].includes(two)){ u.push({v:0,s:two}); i+=2; continue; }
+    if(two==="qu"&&"eiéí".includes(nx2)){ u.push({v:0,s:"qu"}); i+=2; continue; }
+    if(two==="gu"&&"eiéí".includes(nx2)){ u.push({v:0,s:"gu"}); i+=2; continue; }
+    if(two==="gü"){ u.push({v:0,s:"gü"}); i+=2; continue; }
+    u.push({v:0,s:c}); i++;
+  }
+  return u;
+}
+const SP_CL=["pr","br","tr","dr","cr","gr","fr","pl","bl","cl","gl","fl","tl"];
+function spSyllables(w){
+  const u=spUnits(w); if(!u.some(x=>x.v)) return [w];
+  // vowel nuclei, splitting hiatus (two strong vowels, or accented í/ú next to a vowel)
+  const nuc=[]; let cur=null;
+  u.forEach((x,i)=>{ if(x.v){ const p=cur&&cur.end===i-1?u[i-1]:null;
+      const split=p&&((SP_STRONG.includes(p.s)&&SP_STRONG.includes(x.s))||"íú".includes(x.s)||"íú".includes(p.s));
+      if(cur&&cur.end===i-1&&!split) cur.end=i; else { cur={start:i,end:i}; nuc.push(cur); } } });
+  const cuts=[];
+  for(let k=0;k<nuc.length-1;k++){
+    const a=nuc[k].end+1, b=nuc[k+1].start, cons=u.slice(a,b).map(x=>x.s), n=cons.length;
+    let cut;
+    if(n===0) cut=a; else if(n===1) cut=a;
+    else if(n===2) cut=SP_CL.includes(cons.join(""))?a:a+1;
+    else if(n===3) cut=SP_CL.includes(cons[1]+cons[2])?a+1:a+2;
+    else cut=a+2;
+    cuts.push(cut);
+  }
+  const out=[]; let s=0; for(const c of cuts){ out.push(u.slice(s,c)); s=c; } out.push(u.slice(s));
+  return out;
+}
+function spStressIdx(sy,w){
+  const i=sy.findIndex(s=>s.some(x=>SP_ACC.includes(x.s))); if(i>=0) return i;
+  if(sy.length===1) return 0;
+  return /[aeiouns]$/.test(w)?sy.length-2:sy.length-1;
+}
+const SP_VG={a:"ah",e:"eh",i:"ee",o:"oh",u:"oo",ia:"yah",ie:"yeh",io:"yoh",iu:"yoo",ua:"wah",ue:"weh",uo:"woh",ui:"wee",ai:"eye",ei:"ay",oi:"oy",au:"ow",eu:"eh-oo",ou:"oh",uai:"wye",uei:"way",iai:"yeye"};
+const spPlain=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"");
+function spSylPhon(sy, w, sIdx, allUnits, offset){
+  let out="", vow="";
+  const flush=()=>{ if(vow){ out+=SP_VG[vow]||vow.split("").map(c=>SP_VG[c]||c).join(""); vow=""; } };
+  sy.forEach((x,j)=>{
+    const gi=offset+j, nxt=allUnits[gi+1], nv=nxt?spPlain(nxt.s):"";
+    if(x.v){ vow+=x.s==="ü"?"u":spPlain(x.s); return; }
+    flush();
+    const c=x.s, prev=allUnits[gi-1];
+    let p=c;
+    if(c==="ll") p="y"; else if(c==="rr") p="rr"; else if(c==="ñ") p="ny"; else if(c==="qu") p="k"; else if(c==="gu") p="g"; else if(c==="gü") p="gw";
+    else if(c==="c") p="ei".includes(nv[0]||"")?"s":"k"; else if(c==="z") p="s"; else if(c==="g") p="ei".includes(nv[0]||"")?"h":"g";
+    else if(c==="j") p=(gi===allUnits.length-1)?"(h)":"h"; else if(c==="h") p=""; else if(c==="v") p="b"; else if(c==="x") p="ks";
+    else if(c==="r") p=(gi===0||(prev&&"nls".includes(prev.s)))?"rr":"r";
+    out+=p;
+  });
+  flush();
+  return out;
+}
+function spWordPhon(w){
+  const lw=w.toLowerCase().replace(/[^a-záéíóúüñ]/g,""); if(!lw) return {phon:w,syl:w};
+  const sy=spSyllables(lw), st=spStressIdx(sy,lw), all=sy.flat(); let off=0;
+  const parts=sy.map((s,i)=>{ const p=spSylPhon(s,lw,i,all,off); off+=s.length; return sy.length>1&&i===st?p.toUpperCase():p; });
+  const syl=sy.map((s,i)=>{ const t=s.map(x=>x.y?"y":x.s).join(""); return sy.length>1&&i===st?`<b>${t}</b>`:t; }).join("·");
+  return {phon:parts.join("-"), syl};
+}
+function spPhonetic(text){
+  const ws=String(text).split(/\s+/).filter(Boolean).map(spWordPhon);
+  return {phon:ws.map(x=>x.phon).join(" "), syl:ws.map(x=>x.syl).join("  ")};
+}
+// Sound tips for a word, most important first.
+function spTips(text){
+  const t=[], w=" "+String(text).toLowerCase()+" ", add=(k,s)=>{ if(!t.some(x=>x.k===k)) t.push({k,s}); };
+  if(/rr|\sr|[nls]r/.test(w)) add("rr","Rolled R (rr, or r at the start of a word): flutter the tip of your tongue against the ridge behind your top teeth, a quick 'rrr'.");
+  if(/[aeiouáéíóú]r[aeiouáéíóú]|r\s|r[^r\s]/.test(w.replace(/rr/g,""))) add("r","Single r between or after vowels is a quick tap, like the 'tt' in American 'butter' or 'dd' in 'ladder', not an English r.");
+  if(/j|g[eiéí]/.test(w)) add("j","j (and g before e/i) is a breathy h from the back of the throat, like a soft clearing sound: 'h', never the English 'j'.");
+  if(/(^|[^c])h/.test(w.trim())&&!/ch/.test(w)||/\sh|^h/.test(w)) add("h","h is silent: hielo = YEH-loh, huevo = WEH-boh.");
+  if(/ll/.test(w)||/y[aeiou]/.test(w)) add("ll","ll and y sound like the y in 'yes' (in Mexico and most of Latin America).");
+  if(/ñ/.test(w)) add("ñ","ñ is 'ny' like in 'canyon'.");
+  if(/v/.test(w)) add("v","v sounds the same as b. Between vowels it's soft: lips almost touch but don't close.");
+  if(/[aeiouáéíóú]d[aeiouáéíóú\s]|d\s/.test(w)) add("d","d between vowels or at the end is soft, close to the 'th' in 'this'.");
+  if(/z|c[eiéí]/.test(w)) add("z","z, and c before e/i, sound like s in Latin America.");
+  if(/qu|gu[eiéí]/.test(w)) add("qu","In que/qui and gue/gui the u is silent: queso = KEH-soh.");
+  if(/gü/.test(w)) add("gü","ü means say the u: pingüino = peen-GWEE-noh.");
+  if(/[tpk]|c[aou]/.test(w)) add("t","t, p and k are softer than English: no puff of air. For t, touch your tongue to the back of your top teeth.");
+  add("vowels","Keep vowels short and pure: a = ah, e = eh, i = ee, o = oh, u = oo. Don't glide them (no 'oh-w' or 'ay-ee').");
+  return t;
+}
+
+function howToHTML(text,open){
+  const p=spPhonetic(text), tips=spTips(text).slice(0,4);
+  return `<details class="howto"${open?" open":""}><summary>🗣️ How to say it</summary>
+    <div class="phon-big">${esc(p.phon)}</div><div class="note" style="margin:2px 0 8px">Syllables: ${p.syl} <span style="opacity:.8">(bold = stressed)</span></div>
+    <ul>${tips.map(t=>`<li>${esc(t.s)}</li>`).join("")}</ul>
+    <div class="row"><button class="btn ghost" data-say="${esc(text)}" data-rate="-10%">▶︎ Normal</button><button class="btn ghost" data-say="${esc(text)}" data-rate="-45%">🐢 Very slow</button></div></details>`;
+}
+// Detailed feedback on a repeat-after-me attempt.
+function pronFeedbackHTML(target, t, matched){
+  const words=t.words||[], tw=String(target).split(/\s+/);
+  const pills=`<div class="chips" style="justify-content:center">${t.pron!=null?`<span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span>`:""}${t.acc!=null?`<span class="pill ${cls(t.acc)}">Accuracy ${t.acc}</span>`:""}${t.flu!=null?`<span class="pill ${cls(t.flu)}">Fluency ${t.flu}</span>`:""}</div>`;
+  const chips=`<div class="chips" style="justify-content:center;margin-top:8px">${words.map(w=>`<span class="pchip ${cls(w.s)} tw" data-w="${esc(w.w)}">${esc(w.w)} <small>${w.s}</small></span>`).join("")}</div>`;
+  if(!matched){
+    return `<div class="err" style="text-align:center">Heard "${esc(t.text)}". Listen again and retry.</div>${chips}${howToHTML(target,true)}`;
+  }
+  // score each target word by the matching heard word
+  const scored=tw.map(x=>{ const m=words.find(w=>noAcc(w.w)===noAcc(x)); return {w:x, s:m?m.s:null}; });
+  const weak=scored.filter(x=>x.s!=null&&x.s<85&&!/^(el|la|los|las|un|una)$/i.test(x.w)).sort((a,b)=>a.s-b.s);
+  const score=t.pron??t.acc??0;
+  const verdict=score>=90?"🌟 Excellent! That sounds native-like.":score>=80?"👍 Good! A little polish:":score>=65?"🙂 Close. Work on:":"💪 Let's fix a few sounds:";
+  let tips="";
+  if(weak.length){
+    tips=weak.slice(0,2).map(x=>{ const tp=spTips(x.w).filter(k=>x.s<70||k.k!=="vowels").slice(0,2);
+      return `<div class="pfix"><div><b class="tw" data-w="${esc(x.w)}">${esc(x.w)}</b> <span class="pill ${cls(x.s)}">${x.s}</span> · <span class="note" style="margin:0">${esc(spWordPhon(x.w).phon)}</span>
+        <button class="play" data-say="${esc(x.w)}" data-rate="-45%" style="float:right">🐢</button></div><ul>${(()=>{ const ph=spWordPhon(x.w).phon, st=ph.split("-").find(s=>/[A-Z]/.test(s)); return st?`<li>Put the stress on <b>${esc(st)}</b>: ${esc(ph)}.</li>`:""; })()}${tp.map(k=>`<li>${esc(k.s)}</li>`).join("")}</ul></div>`; }).join("");
+  } else if(score<90){
+    const st=spPhonetic(target).phon.split(" ").find(x=>/[A-Z]/.test(x));
+    tips=`<div class="pfix"><ul><li>Every word scored well. To sound even more natural, lean into the stressed syllable${st?` (<b>${esc(st)}</b>)`:""} and keep vowels short and crisp.</li></ul></div>`;
+  }
+  return `<div style="text-align:center;font-weight:700;margin-bottom:6px">${verdict}</div>${pills}${chips}${tips}`;
+}
+
 /* ---------- vocabulary flashcards ---------- */
 // Each word: [picture, Spanish (with article), English, alternates accepted (| separated), optional note]
 // Colors use a hex value as the picture.
@@ -1502,7 +1634,7 @@ function renderCard(){
   const c=s.w[deck.queue[0]];
   deck.peekedEs=false; deck.peekedEn=false; deck.tries=0;
   box.innerHTML=`<div class="vcard pop">${vocabPic(c,true)}
-    <div class="vans" id="vEs"><span class="vword">${tapWords(c[1])}</span> <button class="play" data-say="${esc(c[1])}">▶︎</button>${c[4]?`<div class="note" style="margin:4px 0 0">${esc(c[4])}</div>`:""}</div>
+    <div class="vans" id="vEs"><span class="vword">${tapWords(c[1])}</span> <button class="play" data-say="${esc(c[1])}">▶︎</button>${c[4]?`<div class="note" style="margin:4px 0 0">${esc(c[4])}</div>`:""}<div style="text-align:left;margin-top:8px">${howToHTML(c[1],false)}</div></div>
     <div class="vans en" id="vEn">${esc(c[2])}</div>
     <div class="vres" id="vRes"></div></div>`;
   $("#vMic").classList.remove("rec"); $("#vMicLbl").textContent="Tap and say it";
@@ -1559,10 +1691,10 @@ async function vocabMic(){
   if(ok){
     $("#vEs").classList.add("on");
     const clean=!deck.peekedEs;
-    res.innerHTML=`<div class="ok" style="font-size:18px">✓ ¡Correcto!</div><div style="margin-top:6px">${pr}</div>
+    res.innerHTML=`<div class="ok" style="font-size:18px">✓ ¡Correcto!</div><div style="text-align:left">${pronFeedbackHTML(c[1],t,true)}</div>
       <div class="note">${clean?"Card learned. It's out of the deck.":"Good! You peeked, so it'll come back once more."}${t.pron!=null&&t.pron<60?" Tap the word above to hear it, and work on the sound.":""}</div>`;
     say(c[1],"-15%");
-    setTimeout(()=>{ if(deck&&deck.set.w[deck.queue[0]]===c) nextCard(clean); },2200);
+    setTimeout(()=>{ if(deck&&deck.set.w[deck.queue[0]]===c) nextCard(clean); },3800);
   } else {
     res.innerHTML=`<div class="err">Not quite. I heard: "${esc(t.text)}"</div><div style="margin-top:6px">${pr}</div>
       <div class="note">${deck.tries>=2?"Showing the answer. Listen, then try saying it.":"Try again, or tap Show Spanish."}</div>`;
@@ -1574,7 +1706,7 @@ $("#vShowEs").onclick=()=>{ if(deck&&deck.queue.length) revealEs(false); };
 $("#vShowEn").onclick=()=>{ if(deck&&deck.queue.length){ deck.peekedEn=true; $("#vEn").classList.add("on"); } };
 $("#vKnew").onclick=()=>{ if(deck&&deck.queue.length){ const c=deck.set.w[deck.queue[0]]; if(deck.peekedEs){ toast("You peeked. It'll come back once more."); nextCard(false); } else { toast("Learned: "+c[1]); nextCard(true); } } };
 $("#vSkip").onclick=()=>{ if(deck&&deck.queue.length) nextCard(false); };
-$("#cardBox").addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say,"-15%"); });
+$("#cardBox").addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say,b.dataset.rate||"-15%"); });
 $("#deckBack").onclick=()=>openSet(deck.set.id);
 $("#vocabBack").onclick=goHome;
 $("#openVocab").onclick=openVocab;
@@ -1644,8 +1776,9 @@ function renderLearn(){
         <div class="vword" style="margin-top:12px">${tapWords(c[1])}</div>
         <div style="font-size:18px;color:var(--muted);margin-top:4px">${esc(c[2])}</div>
         ${c[4]?`<div class="note">${esc(c[4])}</div>`:""}
-        <div class="row" style="margin-top:14px;width:100%"><button class="btn ghost" data-say="${esc(c[1])}" data-rate="-10%">▶︎ Hear it</button><button class="btn ghost" data-say="${esc(c[1])}" data-rate="-40%">🐢 Slow</button></div>
-        <button class="btn ghost" id="repeatBtn" style="margin-top:10px">🎤 Repeat after me</button><div id="repeatRes" class="vres" style="min-height:24px"></div>
+        <div style="width:100%;text-align:left">${howToHTML(c[1],false)}</div>
+        <div class="row" style="margin-top:10px;width:100%"><button class="btn ghost" data-say="${esc(c[1])}" data-rate="-10%">▶︎ Hear it</button><button class="btn ghost" data-say="${esc(c[1])}" data-rate="-40%">🐢 Slow</button></div>
+        <button class="btn ghost" id="repeatBtn" style="margin-top:10px">🎤 Repeat after me</button><div id="repeatRes" class="vres" style="min-height:24px;width:100%;text-align:left"></div>
       </div>
       <button class="btn" id="learnNext">${g.i<g.items.length-1?"Next card ›":"Check yourself ›"}</button>`);
     say(c[1],"-10%");
@@ -1657,8 +1790,8 @@ function renderLearn(){
       b.textContent="🎤 Repeat after me"; b.disabled=false;
       if(!t||!t.text){ $("#repeatRes").innerHTML=`<span class="note">Didn't hear you. Try again.</span>`; return; }
       const ok=vocabMatch(c,t.text);
-      $("#repeatRes").innerHTML=ok?`<span class="ok">✓ Nice!</span> ${t.pron!=null?`<span class="pill ${cls(t.pron)}">Pronunciation ${t.pron}</span>`:""}`
-        :`<span class="err">Heard "${esc(t.text)}". Listen again and retry.</span>`;
+      $("#repeatRes").innerHTML=pronFeedbackHTML(c[1],t,ok);
+      ok?chime(true):chime(false);
     };
     return;
   }
