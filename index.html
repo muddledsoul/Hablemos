@@ -149,8 +149,24 @@ svg.trend text{fill:var(--muted);font-size:10px}
 .hav{font-size:44px;line-height:1}
 .bubble{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:14px;border-top-left-radius:4px;padding:10px 12px}
 .bubble .hn{font-size:12px;color:var(--accent);font-weight:700}.bubble .ht{font-size:18px;font-weight:600;transition:filter .2s}
-.scene{position:relative;width:100%;aspect-ratio:3/4;max-height:62vh;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:inset 0 0 40px rgba(0,0,0,.35)}
-.sit{position:absolute;font-size:46px;line-height:1;padding:6px;background:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.45));transition:opacity .4s}
+.scene{position:relative;width:min(100%,calc(62vh*.75));margin:0 auto;aspect-ratio:3/4;border-radius:16px;overflow:hidden;border:1px solid var(--line);container-type:inline-size;background:#bde3ff}
+.scenesvg{position:absolute;inset:0;width:100%;height:100%}
+.scenesvg .drift{animation:drift 40s linear infinite}
+@keyframes drift{0%{transform:translateX(-60px)}100%{transform:translateX(340px)}}
+.scenesvg .spin{animation:spin 20s linear infinite;transform-box:fill-box;transform-origin:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scenesvg .bob{animation:bobp 3.2s ease-in-out infinite;transform-box:fill-box}
+.scenesvg .bob2{animation:bobp 2.6s ease-in-out infinite reverse;transform-box:fill-box}
+@keyframes bobp{0%,100%{translate:0 0}50%{translate:0 -2px}}
+.scenesvg .sway{animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.scenesvg .twinkle circle{animation:tw 1.6s ease-in-out infinite}
+.scenesvg .twinkle circle:nth-child(2n){animation-delay:.8s}
+@keyframes tw{0%,100%{opacity:1}50%{opacity:.35}}
+.scenesvg .steam{animation:steam 2.4s ease-in-out infinite}
+@keyframes steam{0%{opacity:0;translate:0 6px}50%{opacity:.9}100%{opacity:0;translate:0 -8px}}
+.swatch.sc{width:11cqw;height:11cqw;border:3px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.35)}
+.sit{position:absolute;font-size:12cqw;line-height:1;padding:6px;background:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.45));transition:opacity .4s}
 .sit.gone{opacity:0;pointer-events:none}
 .sit.hitok{animation:found .9s forwards}
 @keyframes found{0%{filter:drop-shadow(0 0 0 #3ddc84)}40%{filter:drop-shadow(0 0 14px #3ddc84)}100%{opacity:0}}
@@ -369,7 +385,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "15 (vocab games + scenes)";
+const APP_VERSION = "16 (illustrated scenes)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -1671,6 +1687,104 @@ function endMatch(){
 }
 $("#gameBody").addEventListener("click",e=>{ const b=e.target.closest("[data-say]"); if(b&&!b.classList.contains("mt")) say(b.dataset.say,b.dataset.rate||"-10%"); });
 
+/* ---------- illustrated scene backgrounds (original SVG art) ---------- */
+// Scene is 300x400. Items sit on 4 rows x 4 columns of surfaces.
+const SLOT_X=[42,114,186,258], SLOT_Y=[174,240,306,366];
+function sceneSlots(n){
+  const all=[]; for(const y of SLOT_Y) for(const x of SLOT_X) all.push({x,y});
+  return shuffle(all).slice(0,n).map(p=>({x:p.x+(Math.random()-0.5)*10, y:p.y-4+(Math.random()-0.5)*6, rot:Math.round((Math.random()-0.5)*16), s:0.9+Math.random()*0.2}));
+}
+const SV={
+  person(x,y,s,shirt,skin,hair,cls=""){
+    return `<g class="${cls}" transform="translate(${x} ${y}) scale(${s})">
+      <rect x="-15" y="12" width="30" height="34" rx="11" fill="${shirt}"/>
+      <rect x="-21" y="16" width="8" height="22" rx="4" fill="${shirt}" transform="rotate(12 -17 16)"/><rect x="13" y="16" width="8" height="22" rx="4" fill="${shirt}" transform="rotate(-12 17 16)"/>
+      <circle cx="0" cy="0" r="13" fill="${skin}"/>
+      <path d="M-13 -1 Q-14 -15 0 -15 Q14 -15 13 -1 Q8 -9 0 -9 Q-8 -9 -13 -1Z" fill="${hair}"/>
+      <circle cx="-4.5" cy="0" r="1.7" fill="#222"/><circle cx="4.5" cy="0" r="1.7" fill="#222"/>
+      <path d="M-4 5 Q0 8.5 4 5" stroke="#7a3b2e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <circle cx="-8" cy="4" r="2.2" fill="#ff8a80" opacity=".5"/><circle cx="8" cy="4" r="2.2" fill="#ff8a80" opacity=".5"/></g>`;
+  },
+  cloud(x,y,s){ return `<g class="drift" style="animation-delay:${-x/10}s"><g transform="translate(${x} ${y}) scale(${s})" fill="#fff" opacity=".95"><circle cx="0" cy="0" r="10"/><circle cx="12" cy="-5" r="12"/><circle cx="25" cy="0" r="9"/><rect x="0" y="0" width="25" height="9"/></g></g>`; },
+  sun(x,y){ return `<g transform="translate(${x} ${y})"><g class="spin">${[...Array(10)].map((_,i)=>`<rect x="-2" y="-27" width="4" height="9" rx="2" fill="#ffd54f" transform="rotate(${i*36})"/>`).join("")}</g><circle r="15" fill="#ffca28"/></g>`; },
+  awning(x,y,w,c1,c2){ const n=8, sw=w/n; let s=""; for(let i=0;i<n;i++) s+=`<rect x="${x+i*sw}" y="${y}" width="${sw}" height="20" fill="${i%2?c2:c1}"/><path d="M${x+i*sw} ${y+20} q${sw/2} 10 ${sw} 0" fill="${i%2?c2:c1}"/>`; return `<g>${s}<rect x="${x-3}" y="${y-5}" width="${w+6}" height="6" rx="3" fill="#6d4c41"/></g>`; },
+  crate(x,y,w=62,h=26){ return `<g><rect x="${x-w/2}" y="${y}" width="${w}" height="${h}" rx="3" fill="#c98b4a" stroke="#8d5524" stroke-width="2"/><line x1="${x-w/2}" y1="${y+h/2}" x2="${x+w/2}" y2="${y+h/2}" stroke="#8d5524" stroke-width="1.5"/><line x1="${x-w/2+6}" y1="${y}" x2="${x-w/2+6}" y2="${y+h}" stroke="#8d5524" stroke-width="1.5"/><line x1="${x+w/2-6}" y1="${y}" x2="${x+w/2-6}" y2="${y+h}" stroke="#8d5524" stroke-width="1.5"/></g>`; },
+  plank(y,c="#a1887f",d="#6d4c41"){ return `<rect x="6" y="${y}" width="288" height="9" rx="3" fill="${c}"/><rect x="6" y="${y+9}" width="288" height="4" fill="${d}" opacity=".6"/>`; },
+  window(x,y,w,h,inner){ return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#fff"/><rect x="${x+4}" y="${y+4}" width="${w-8}" height="${h-8}" fill="#9ad7ff"/>${inner||""}<line x1="${x+w/2}" y1="${y+4}" x2="${x+w/2}" y2="${y+h-4}" stroke="#fff" stroke-width="3"/><line x1="${x+4}" y1="${y+h/2}" x2="${x+w-4}" y2="${y+h/2}" stroke="#fff" stroke-width="3"/></g>`; },
+  plant(x,y){ return `<g class="sway" style="transform-origin:${x}px ${y}px"><path d="M${x} ${y} q-14 -18 -6 -32 M${x} ${y} q4 -24 14 -30 M${x} ${y} q-2 -20 2 -38" stroke="#43a047" stroke-width="6" fill="none" stroke-linecap="round"/></g><path d="M${x-12} ${y} h24 l-4 18 h-16z" fill="#e57348"/>`; },
+  table(x,y,w,c){ return `<g><rect x="${x-w/2}" y="${y}" width="${w}" height="10" rx="4" fill="${c}"/><path d="M${x-w/2} ${y+10} h${w} l-6 12 h-${w-12}z" fill="${c}" opacity=".85"/></g>`; }
+};
+function sceneSVG(bg){
+  const P=SV.person, S=SV, rows=(fn)=>SLOT_Y.map((y,i)=>fn(y+12,i)).join("");
+  let back="", surf="";
+  if(bg==="market"){
+    back=`<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ec8ff"/><stop offset="1" stop-color="#d6f0ff"/></linearGradient></defs>
+      <rect width="300" height="400" fill="url(#sky)"/>${S.sun(258,30)}${S.cloud(30,30,1)}${S.cloud(150,18,.8)}
+      <rect x="0" y="62" width="70" height="70" fill="#ffb74d"/><rect x="70" y="48" width="60" height="84" fill="#f06292"/><rect x="130" y="66" width="80" height="66" fill="#4db6ac"/><rect x="210" y="54" width="90" height="78" fill="#9575cd"/>
+      ${[[12,74],[40,74],[85,62],[105,62],[150,78],[180,78],[230,66],[265,66]].map(([x,y])=>`<rect x="${x}" y="${y}" width="14" height="14" rx="2" fill="#fff8e1" opacity=".8"/>`).join("")}
+      <rect x="0" y="126" width="300" height="274" fill="#f1dfb4"/>
+      ${P(48,128,.9,"#42a5f5","#f1c27d","#4e342e","bob")}${P(150,124,1,"#ef5350","#c68642","#212121","bob2")}${P(252,130,.85,"#66bb6a","#e0ac69","#795548","bob")}
+      ${S.awning(4,100,140,"#e53935","#fff")}${S.awning(156,100,140,"#43a047","#fff")}
+      <rect x="6" y="104" width="5" height="60" fill="#6d4c41"/><rect x="137" y="104" width="5" height="60" fill="#6d4c41"/><rect x="158" y="104" width="5" height="60" fill="#6d4c41"/><rect x="289" y="104" width="5" height="60" fill="#6d4c41"/>`;
+    surf=rows(y=>SLOT_X.map(x=>S.crate(x,y)).join(""));
+  } else if(bg==="office"){
+    back=`<rect width="300" height="400" fill="#e3ecf3"/>${S.window(20,18,110,80,`<g fill="#5c7a99">${[[30,60,14,34],[48,48,16,46],[68,56,14,38],[86,40,18,54],[108,58,14,36]].map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}"/>`).join("")}</g>`)}
+      <circle cx="170" cy="40" r="20" fill="#fff" stroke="#90a4ae" stroke-width="4"/><line x1="170" y1="40" x2="170" y2="27" stroke="#37474f" stroke-width="3" stroke-linecap="round"/><line x1="170" y1="40" x2="180" y2="44" class="spin" style="transform-origin:170px 40px;animation-duration:12s" stroke="#e53935" stroke-width="2"/>
+      ${S.plant(268,128)}${P(225,112,.95,"#5c6bc0","#f1c27d","#3e2723","bob")}
+      <rect x="0" y="140" width="300" height="260" fill="#cfd8dc"/>`;
+    surf=rows((y,i)=>i<2?S.plank(y,"#90a4ae","#546e7a"):S.table(150,y,288,"#8d6e63"));
+  } else if(bg==="store"){
+    back=`<rect width="300" height="400" fill="#fbf3e4"/><rect x="40" y="14" width="220" height="38" rx="8" fill="#ff7043"/><text x="150" y="40" text-anchor="middle" font-size="20" font-weight="800" fill="#fff" font-family="system-ui">LA TIENDA</text>
+      <g class="twinkle">${[...Array(9)].map((_,i)=>`<circle cx="${30+i*30}" cy="64" r="4" fill="${["#ffd54f","#4fc3f7","#f06292"][i%3]}"/>`).join("")}</g>
+      ${P(60,112,.95,"#26a69a","#e0ac69","#212121","bob")}<rect x="20" y="132" width="90" height="24" rx="4" fill="#795548"/>${P(245,116,.85,"#ab47bc","#f1c27d","#6d4c41","bob2")}
+      <rect x="0" y="150" width="300" height="250" fill="#efe6d4"/>`;
+    surf=rows(y=>S.plank(y,"#bcaaa4","#8d6e63")+SLOT_X.map(x=>`<rect x="${x-9}" y="${y+12}" width="18" height="10" rx="2" fill="#fff59d"/>`).join(""));
+  } else if(bg==="garage"){
+    back=`<rect width="300" height="400" fill="#78909c"/>${[...Array(10)].map((_,i)=>`<rect x="0" y="${i*13}" width="300" height="6" fill="#90a4ae"/>`).join("")}
+      <g transform="translate(150 106)"><rect x="-70" y="-18" width="140" height="30" rx="12" fill="#e53935"/><path d="M-40 -18 l14 -20 h52 l14 20z" fill="#ef5350"/><rect x="-28" y="-34" width="22" height="14" fill="#b3e5fc"/><rect x="2" y="-34" width="22" height="14" fill="#b3e5fc"/><circle cx="-42" cy="14" r="12" fill="#263238"/><circle cx="42" cy="14" r="12" fill="#263238"/><circle cx="-42" cy="14" r="5" fill="#b0bec5"/><circle cx="42" cy="14" r="5" fill="#b0bec5"/></g>
+      ${P(36,118,.95,"#1e88e5","#c68642","#212121","bob")}
+      <rect x="0" y="140" width="300" height="260" fill="#9aa5ab"/><g fill="#7d878c">${[...Array(60)].map((_,i)=>`<circle cx="${12+(i%12)*25}" cy="${150+Math.floor(i/12)*50}" r="2"/>`).join("")}</g>`;
+    surf=rows((y,i)=>i<3?S.plank(y,"#b0bec5","#607d8b"):`<rect x="0" y="${y}" width="300" height="60" fill="#616161"/><ellipse cx="90" cy="${y+18}" rx="30" ry="6" fill="#424242"/>`);
+  } else if(bg==="kitchen"){
+    back=`<rect width="300" height="400" fill="#fff"/><g fill="#e3f2fd">${[...Array(80)].map((_,i)=>(i+Math.floor(i/10))%2?`<rect x="${(i%10)*30}" y="${Math.floor(i/10)*30}" width="30" height="30"/>`:"").join("")}</g>
+      <rect x="0" y="0" width="300" height="34" fill="#a1887f"/><rect x="10" y="4" width="60" height="26" rx="3" fill="#bcaaa4"/><rect x="80" y="4" width="60" height="26" rx="3" fill="#bcaaa4"/><rect x="230" y="4" width="60" height="26" rx="3" fill="#bcaaa4"/>
+      ${S.window(150,44,90,70)}<path d="M150 44 q22 30 0 70 M240 44 q-22 30 0 70" fill="#ef9a9a"/>
+      ${P(70,112,1,"#ec407a","#e0ac69","#9e9e9e","bob")}<g class="steam" fill="none" stroke="#cfd8dc" stroke-width="3" stroke-linecap="round"><path d="M260 120 q-6 -8 0 -16 q6 -8 0 -16"/><path d="M272 122 q-6 -8 0 -16 q6 -8 0 -16"/></g><rect x="248" y="122" width="34" height="14" rx="4" fill="#546e7a"/>`;
+    surf=rows((y,i)=>`<rect x="0" y="${y}" width="300" height="${i===3?40:12}" fill="#90a4ae"/><rect x="0" y="${y}" width="300" height="5" fill="#eceff1"/>`);
+  } else if(bg==="restaurant"){
+    back=`<rect width="300" height="400" fill="#7b2d26"/><rect y="150" width="300" height="250" fill="#f3e3c3"/>
+      <path d="M0 26 Q75 46 150 26 T300 26" stroke="#3e2723" stroke-width="2" fill="none"/><g class="twinkle">${[...Array(10)].map((_,i)=>`<circle cx="${15+i*30}" cy="${30+Math.sin(i)*6}" r="5" fill="#ffe082"/>`).join("")}</g>
+      <rect x="20" y="52" width="80" height="62" rx="6" fill="#263238" stroke="#8d6e63" stroke-width="4"/><text x="60" y="72" text-anchor="middle" fill="#fff" font-size="11" font-family="system-ui" font-weight="700">MENÚ</text><g stroke="#cfd8dc" stroke-width="2">${[82,92,102].map(y=>`<line x1="32" y1="${y}" x2="88" y2="${y}"/>`).join("")}</g>
+      ${P(200,110,1,"#212121","#f1c27d","#212121","bob")}<rect x="187" y="122" width="26" height="6" fill="#fff"/>${P(268,124,.8,"#ffb300","#c68642","#5d4037","bob2")}`;
+    surf=rows(y=>SLOT_X.map(x=>`<ellipse cx="${x}" cy="${y+4}" rx="32" ry="9" fill="#fff"/><path d="M${x-32} ${y+4} q32 22 64 0" fill="#e53935" opacity=".85"/>`).join(""));
+  } else if(bg==="home"){
+    back=`<rect width="300" height="400" fill="#f6e7c1"/><g stroke="#efd9a7" stroke-width="6">${[...Array(12)].map((_,i)=>`<line x1="${i*28}" y1="0" x2="${i*28}" y2="150"/>`).join("")}</g>
+      ${S.window(196,18,84,74)}<rect x="30" y="24" width="56" height="42" fill="#fff" stroke="#8d6e63" stroke-width="5"/><path d="M36 60 l14 -18 l10 12 l8 -8 l12 14z" fill="#66bb6a"/><circle cx="72" cy="36" r="5" fill="#ffca28"/>
+      <rect x="100" y="96" width="110" height="40" rx="14" fill="#5c6bc0"/><rect x="94" y="110" width="20" height="30" rx="8" fill="#3f51b5"/><rect x="196" y="110" width="20" height="30" rx="8" fill="#3f51b5"/>
+      ${P(150,96,.9,"#26c6da","#e0ac69","#4e342e","bob")}<g class="sway" style="transform-origin:262px 100px"><path d="M262 100 l-16 -2 l16 -26 l16 26z" fill="#ffcc80"/></g><rect x="260" y="100" width="4" height="40" fill="#6d4c41"/>
+      <rect y="150" width="300" height="250" fill="#d7b98e"/>`;
+    surf=rows((y,i)=>i<2?S.plank(y,"#8d6e63","#5d4037"):`<ellipse cx="150" cy="${y+10}" rx="${i===2?140:130}" ry="16" fill="${i===2?"#ef9a9a":"#90caf9"}" opacity=".8"/>`);
+  } else if(bg==="farm"){
+    back=`<rect width="300" height="400" fill="#8fd3ff"/>${S.sun(40,32)}${S.cloud(120,22,1)}${S.cloud(220,40,.7)}
+      <path d="M0 110 Q80 70 160 104 T300 92 V160 H0z" fill="#81c784"/><g transform="translate(220 64)"><path d="M0 30 l30 -26 l30 26 v44 h-60z" fill="#c62828"/><rect x="20" y="44" width="20" height="30" fill="#fff"/><path d="M20 44 l20 30 M40 44 l-20 30" stroke="#c62828" stroke-width="3"/></g>
+      ${P(80,112,.95,"#8d6e63","#e0ac69","#5d4037","bob")}<path d="M60 100 h40 l-6 -10 h-28z" fill="#ffd54f"/>
+      <rect y="140" width="300" height="260" fill="#9ccc65"/><g stroke="#8d6e63" stroke-width="4">${[...Array(11)].map((_,i)=>`<line x1="${i*30}" y1="128" x2="${i*30}" y2="152"/>`).join("")}<line x1="0" y1="134" x2="300" y2="134"/><line x1="0" y1="146" x2="300" y2="146"/></g>`;
+    surf=rows(y=>SLOT_X.map(x=>`<ellipse cx="${x}" cy="${y+6}" rx="28" ry="7" fill="#7cb342"/>`).join(""));
+  } else if(bg==="street"){
+    back=`<rect width="300" height="400" fill="#90caf9"/>${S.cloud(40,24,1)}${S.cloud(190,16,.8)}
+      <rect x="0" y="50" width="60" height="96" fill="#ef9a9a"/><rect x="60" y="34" width="70" height="112" fill="#ffe082"/><rect x="130" y="60" width="60" height="86" fill="#a5d6a7"/><rect x="190" y="42" width="110" height="104" fill="#b39ddb"/>
+      ${[...Array(16)].map((_,i)=>`<rect x="${10+(i%8)*36}" y="${70+Math.floor(i/8)*30}" width="14" height="16" rx="2" fill="#fffde7" opacity=".85"/>`).join("")}
+      ${P(250,124,.85,"#1565c0","#c68642","#212121","bob")}<rect x="236" y="104" width="28" height="7" rx="3" fill="#0d47a1"/>
+      <rect y="146" width="300" height="254" fill="#546e7a"/>`;
+    surf=rows((y,i)=>i%2?`<rect x="0" y="${y}" width="300" height="12" fill="#b0bec5"/>`:`<g fill="#fff">${[...Array(8)].map((_,k)=>`<rect x="${k*40}" y="${y+4}" width="22" height="4"/>`).join("")}</g>`);
+  } else { // paint
+    back=`<rect width="300" height="400" fill="#fffaf2"/>${["#ef5350","#42a5f5","#66bb6a","#ffca28","#ab47bc"].map((c,i)=>`<circle cx="${30+i*60}" cy="${20+(i%2)*14}" r="${10+i%3*4}" fill="${c}" opacity=".35"/>`).join("")}
+      <g transform="translate(200 40)"><path d="M10 100 l20 -100 l20 100 M30 0 v100" stroke="#8d6e63" stroke-width="5" fill="none"/><rect x="0" y="10" width="60" height="50" fill="#fff" stroke="#bcaaa4" stroke-width="3"/><path d="M8 50 q12 -26 22 -8 q10 -20 22 6" stroke="#42a5f5" stroke-width="4" fill="none"/><circle cx="42" cy="22" r="6" fill="#ffca28"/></g>
+      ${P(80,110,1,"#7e57c2","#f1c27d","#e65100","bob")}<rect y="150" width="300" height="250" fill="#efe3cf"/>`;
+    surf=rows(y=>S.plank(y,"#d7ccc8","#a1887f"));
+  }
+  return `<svg class="scenesvg" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${back}${surf}</svg>`;
+}
 /* ---------- Find it: listening scenes ---------- */
 const SCENES=[
   {id:"market",t:"Farmers market",ic:"🧺",helper:"👵",name:"Doña Rosa",bg:"market",sets:["fruits","veg"]},
@@ -1734,14 +1848,14 @@ function renderFind(first){
     $("#fAgain").onclick=()=>startScene(g.sc.id, g.key.startsWith("scene_")?null:g.key); $("#fBack").onclick=g.back;
     return;
   }
-  if(first){ g.pos=placeItems(g.items.length); g.found=new Set(); }
+  if(first){ g.pos=sceneSlots(g.items.length); g.found=new Set(); g.svg=sceneSVG(g.sc.bg); }
   const c=g.targets[g.t]; g.prompt=findPrompt(c); g.tries=0;
   $("#gameSub").textContent=`Find ${g.t+1} of ${g.targets.length} · ${g.firstTry} first try`;
   gbody(`<div class="helper"><span class="hav">${g.sc.helper}</span><div class="bubble"><div class="hn">${esc(g.sc.name)}</div>
       <div class="ht" id="fText" style="${g.showText?"":"filter:blur(6px)"}">${esc(g.prompt)}</div></div></div>
     <div class="row" style="margin:8px 0"><button class="btn ghost" id="fHear">🔊 Hear again</button><button class="btn ghost" id="fShow">${g.showText?"Hide text":"Show text"}</button></div>
-    <div class="scene bg-${g.sc.bg}" id="sceneBox">${g.items.map((it,k)=>{ const p=g.pos[k];
-      return `<button class="sit${g.found.has(it[1])?" gone":""}" data-k="${k}" style="left:${p.x}%;top:${p.y}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch" style="width:46px;height:46px;background:${it[0]}"></span>`:it[0]}</button>`; }).join("")}</div>
+    <div class="scene" id="sceneBox">${g.svg}${g.items.map((it,k)=>{ const p=g.pos[k];
+      return `<button class="sit${g.found.has(it[1])?" gone":""}" data-k="${k}" style="left:${p.x/3}%;top:${p.y/4}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch sc" style="background:${it[0]}"></span>`:it[0]}</button>`; }).join("")}</div>
     <div class="note" id="fMsg" style="text-align:center;min-height:22px;margin-top:8px"></div>`);
   say(g.prompt,"-10%");
   $("#fHear").onclick=()=>say(g.prompt,"-25%");
@@ -1782,7 +1896,7 @@ function startName(sceneId, onlySet){
   const words=(onlySet?[onlySet]:sc.sets).flatMap(id=>setById(id).w);
   const items=shuffle([...new Map(words.map(c=>[c[1],c])).values()]).slice(0,16);
   game={kind:"name", sc, items, targets:shuffle(items.slice()).slice(0,Math.min(8,items.length)), t:0, results:[],
-        key:(onlySet||("scene_"+sc.id)), back:onlySet?()=>openSet(onlySet):openVocab, pos:placeItems(items.length), started:false};
+        key:(onlySet||("scene_"+sc.id)), back:onlySet?()=>openSet(onlySet):openVocab, pos:sceneSlots(items.length), svg:sceneSVG(sc.bg), started:false};
   gameShell("🗣️ Name it · "+sc.t,"");
   renderName();
 }
@@ -1793,8 +1907,8 @@ function nameScore(ok, pron, secs){
   return {acc,pr,sp,total:acc+pr+sp};
 }
 function sceneHTML(g,hi){
-  return `<div class="scene bg-${g.sc.bg}" id="sceneBox">${g.items.map((it,k)=>{ const p=g.pos[k];
-    return `<div class="sit${k===hi?" target":""}" style="left:${p.x}%;top:${p.y}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch" style="width:46px;height:46px;background:${it[0]}"></span>`:it[0]}${k===hi?`<span class="pointer">👇</span>`:""}</div>`; }).join("")}</div>`;
+  return `<div class="scene" id="sceneBox">${g.svg}${g.items.map((it,k)=>{ const p=g.pos[k];
+    return `<div class="sit${k===hi?" target":""}" style="left:${p.x/3}%;top:${p.y/4}%;transform:translate(-50%,-50%) rotate(${p.rot}deg) scale(${p.s})">${it[0].startsWith("#")?`<span class="swatch sc" style="background:${it[0]}"></span>`:it[0]}${k===hi?`<span class="pointer">👇</span>`:""}</div>`; }).join("")}</div>`;
 }
 async function renderName(){
   const g=game;
