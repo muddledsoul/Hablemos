@@ -168,7 +168,7 @@ svg.trend text{fill:var(--muted);font-size:10px}
 .swatch.sc{width:11cqw;height:11cqw;border:3px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.35)}
 .sit{position:absolute;font-size:12cqw;line-height:1;padding:6px;background:none;filter:drop-shadow(0 4px 4px rgba(0,0,0,.45));transition:opacity .4s}
 .sit.gone{opacity:0;pointer-events:none}
-.sit.hitok{animation:found .9s forwards}
+.sit.hitok{animation:found .6s forwards}
 @keyframes found{0%{filter:drop-shadow(0 0 0 #3ddc84)}40%{filter:drop-shadow(0 0 14px #3ddc84)}100%{opacity:0}}
 .sit.hitbad{animation:shake .35s}
 .sit.glow{animation:glow 1s infinite}
@@ -385,7 +385,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "16 (illustrated scenes)";
+const APP_VERSION = "17 (faster Find it)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -473,11 +473,31 @@ function synth(text, rate){
     }, e=>{ s.close(); rej(new Error(String(e))); });
   });
 }
+// Only the most recent request plays: a clip that finishes loading after a newer one was
+// requested is dropped, so late audio never talks over the next prompt.
+let sayTok=0;
 async function say(text, rate){
+  const my=++sayTok;
   try{
     const url=await synth(text, rate ?? S.speed);
-    await new Promise(res=>{ const p=$("#player"); p.onended=res; p.onerror=res; p.src=url; p.play().catch(()=>res()); });
-  }catch(e){ toast("Voice error: "+e.message, 4000); }
+    if(my!==sayTok) return;
+    await new Promise(res=>{ const p=$("#player"); p.pause(); p.onended=res; p.onerror=res; p.src=url; p.play().catch(()=>res()); });
+  }catch(e){ if(my===sayTok) toast("Voice error: "+e.message, 4000); }
+}
+function prefetch(text, rate){ synth(text, rate ?? S.speed).catch(()=>{}); }
+// Short local chime (no network): right = rising two notes, wrong = low buzz.
+let actx=null;
+function chime(ok){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const t=actx.currentTime;
+    (ok?[[660,0],[990,.09]]:[[180,0]]).forEach(([f,d])=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type=ok?"sine":"square"; o.frequency.value=f; o.connect(g); g.connect(actx.destination);
+      g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(ok?0.25:0.08,t+d+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+d+(ok?0.18:0.22));
+      o.start(t+d); o.stop(t+d+0.25);
+    });
+  }catch(e){}
 }
 
 /* ---------- Claude ---------- */
@@ -1849,7 +1869,8 @@ function renderFind(first){
     return;
   }
   if(first){ g.pos=sceneSlots(g.items.length); g.found=new Set(); g.svg=sceneSVG(g.sc.bg); }
-  const c=g.targets[g.t]; g.prompt=findPrompt(c); g.tries=0;
+  const c=g.targets[g.t]; g.prompts=g.prompts||{}; g.prompt=g.prompts[g.t]||(g.prompts[g.t]=findPrompt(c)); g.tries=0;
+  if(g.t+1<g.targets.length){ g.prompts[g.t+1]=g.prompts[g.t+1]||findPrompt(g.targets[g.t+1]); prefetch(g.prompts[g.t+1],"-10%"); }
   $("#gameSub").textContent=`Find ${g.t+1} of ${g.targets.length} · ${g.firstTry} first try`;
   gbody(`<div class="helper"><span class="hav">${g.sc.helper}</span><div class="bubble"><div class="hn">${esc(g.sc.name)}</div>
       <div class="ht" id="fText" style="${g.showText?"":"filter:blur(6px)"}">${esc(g.prompt)}</div></div></div>
@@ -1867,13 +1888,13 @@ function renderFind(first){
       g.lock=true; if(g.tries===0) g.firstTry++;
       b.classList.add("hitok"); g.found.add(it[1]);
       $("#fMsg").innerHTML=`<span class="ok">✓ ¡Eso es! ${esc(c[1])}</span> · ${esc(c[2])}`;
-      say("¡Eso es! "+c[1],"-10%");
-      setTimeout(()=>{ g.lock=false; g.t++; renderFind(false); },1400);
+      chime(true); $("#player").pause(); sayTok++;
+      setTimeout(()=>{ g.lock=false; g.t++; renderFind(false); },650);
     } else {
       g.tries++; g.misses++;
       b.classList.add("hitbad"); setTimeout(()=>b.classList.remove("hitbad"),500);
       $("#fMsg").innerHTML=`<span class="err">Eso es ${esc(it[1])}</span> <span class="note">(${esc(it[2])})</span>`;
-      say("No, eso es "+it[1],"-10%");
+      chime(false); say("No, eso es "+it[1],"-10%");
       if(g.tries>=2){ const k=g.items.indexOf(c); const t=$("#sceneBox").querySelector(`[data-k="${k}"]`); if(t) t.classList.add("glow"); }
     }
   });
