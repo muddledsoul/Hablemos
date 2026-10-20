@@ -221,6 +221,7 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
 img.emo{width:1.18em;height:1.18em;margin:-0.09em;vertical-align:-0.2em;display:inline-block;pointer-events:none}
 .undo{align-self:flex-end;font-size:13px;font-weight:600;padding:5px 11px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);margin-top:-6px}
 .undo:active{background:var(--panel)}
+pre.dbg{white-space:pre-wrap;word-break:break-word;font:11px/1.35 ui-monospace,Menlo,monospace;background:#0a0f12;border:1px solid var(--line);border-radius:10px;padding:8px;max-height:60vh;overflow:auto}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
@@ -314,6 +315,9 @@ img.emo{width:1.18em;height:1.18em;margin:-0.09em;vertical-align:-0.2em;display:
     <div style="height:10px"></div>
     <button class="btn ghost" id="testKeys">Test keys</button>
     <p class="note" id="testOut"></p>
+    <label>🐞 Audio & mic debug log</label>
+    <p class="note" style="margin-top:0">If the audio sounds weird or the mic stops working, tap 🔧 in the conversation (or Reset audio here), then Share log and send it to Claude.</p>
+    <div id="dbgBox"></div>
     <p class="note" style="text-align:center;margin-top:18px">Hablemos version <b id="appVer"></b></p>
   </div>
 </section>
@@ -388,7 +392,7 @@ img.emo{width:1.18em;height:1.18em;margin:-0.09em;vertical-align:-0.2em;display:
 
 <!-- VOCAB GAME (learn / quiz / match) -->
 <section id="s-game" class="screen">
-  <header><button class="iconbtn" id="gameBack" aria-label="Back">‹</button><h1 id="gameTitle">Game</h1><button class="iconbtn" id="gameMute" aria-label="Mute">🔊</button></header>
+  <header><button class="iconbtn" id="gameBack" aria-label="Back">‹</button><h1 id="gameTitle">Game</h1><button class="iconbtn" id="gameFix" aria-label="Reset audio">🔧</button><button class="iconbtn" id="gameMute" aria-label="Mute">🔊</button></header>
   <div style="padding:8px 16px 0"><div class="note" id="gameSub" style="margin:0;text-align:center"></div></div>
   <div class="scroll" id="gameBody"></div>
 </section>
@@ -398,6 +402,7 @@ img.emo{width:1.18em;height:1.18em;margin:-0.09em;vertical-align:-0.2em;display:
   <header>
     <button class="iconbtn" id="backBtn" aria-label="Back">‹</button>
     <h1 id="chatTitle">Conversation</h1>
+    <button class="iconbtn" id="fixAudio" aria-label="Reset audio">🔧</button>
     <button class="iconbtn" id="endBtn" aria-label="Finish and review" style="width:auto;padding:0 12px;font-size:14px;font-weight:600">Review</button>
   </header>
   <div class="scroll" id="chatScroll"><div id="chat"></div></div>
@@ -416,6 +421,65 @@ img.emo{width:1.18em;height:1.18em;margin:-0.09em;vertical-align:-0.2em;display:
 <div id="toast"></div>
 <audio id="player" playsinline></audio>
 
+<script>
+/* ---------- debug log (loads first so it can watch the mic and audio the speech SDK opens) ---------- */
+(function(){
+  const KEY="hablemos.debug.v1", MAX=600;
+  let buf=[]; try{ buf=JSON.parse(localStorage.getItem(KEY)||"[]"); }catch(e){}
+  let saveT=null;
+  const save=()=>{ clearTimeout(saveT); saveT=setTimeout(()=>{ try{ localStorage.setItem(KEY,JSON.stringify(buf.slice(-MAX))); }catch(e){} },300); };
+  const log=(type,msg)=>{ buf.push([Date.now(),type,String(msg).slice(0,400)]); if(buf.length>MAX*1.25) buf=buf.slice(-MAX); save(); };
+  const streams=new Set(), ctxs=new Set();
+  window.DBG={log, lines:()=>buf, clear(){ buf=[]; save(); }, streams, ctxs,
+    status(){
+      const live=[...streams].flatMap(s=>s.getTracks()).filter(t=>t.readyState==="live");
+      return {openMicStreams:live.length, mutedMic:live.filter(t=>t.muted).length,
+        audioContexts:[...ctxs].filter(c=>c.state!=="closed").map(c=>c.state).join(",")||"none",
+        audioSession:navigator.audioSession?navigator.audioSession.type+"/"+navigator.audioSession.state:"n/a", visible:document.visibilityState};
+    }};
+  log("app","launch · "+navigator.userAgent);
+  window.addEventListener("error",e=>log("error",(e.message||"")+" @line "+e.lineno));
+  window.addEventListener("unhandledrejection",e=>log("error","promise: "+(e.reason&&(e.reason.message||e.reason))));
+  document.addEventListener("visibilitychange",()=>log("app","visibility "+document.visibilityState));
+  window.addEventListener("pagehide",()=>log("app","pagehide"));
+  window.addEventListener("pageshow",e=>log("app","pageshow"+(e.persisted?" (restored)":"")));
+  const md=navigator.mediaDevices;
+  if(md&&md.getUserMedia){
+    const orig=md.getUserMedia.bind(md);
+    md.getUserMedia=async c=>{
+      const t0=Date.now(); log("mic","getUserMedia request");
+      try{
+        const s=await orig(c); streams.add(s);
+        s.getTracks().forEach(t=>{
+          log("mic",`mic OPEN "${t.label||t.kind}" in ${Date.now()-t0}ms · open now: ${[...streams].length}`);
+          t.addEventListener("ended",()=>{ streams.delete(s); log("mic","mic ENDED by the system"); });
+          t.addEventListener("mute",()=>log("mic","mic MUTED by iOS (another app/call/Siri or route change)"));
+          t.addEventListener("unmute",()=>log("mic","mic unmuted"));
+          const stop=t.stop.bind(t); t.stop=()=>{ stop(); streams.delete(s); log("mic","mic closed · open now: "+[...streams].length); };
+        });
+        return s;
+      }catch(e){ log("error","getUserMedia FAILED: "+e.name+": "+e.message); throw e; }
+    };
+    if(md.addEventListener) md.addEventListener("devicechange",()=>{
+      md.enumerateDevices().then(d=>log("route","audio devices changed: "+d.map(x=>x.kind.replace("audio","")+":"+(x.label||"?")).join(", "))).catch(()=>log("route","audio devices changed"));
+    });
+  }
+  for(const name of ["AudioContext","webkitAudioContext"]){
+    const AC=window[name]; if(!AC) continue;
+    const W=function(...a){
+      const c=new AC(...a); ctxs.add(c);
+      log("audio",`${name} created (${c.state}) · open now: ${[...ctxs].filter(x=>x.state!=="closed").length}`);
+      if(c.addEventListener) c.addEventListener("statechange",()=>{ log("audio","AudioContext → "+c.state); if(c.state==="closed") ctxs.delete(c); });
+      return c;
+    };
+    W.prototype=AC.prototype; window[name]=W;
+  }
+  if(navigator.audioSession){
+    log("route","audioSession type="+navigator.audioSession.type+" state="+navigator.audioSession.state);
+    if(navigator.audioSession.addEventListener) navigator.audioSession.addEventListener("statechange",()=>log("route","audioSession → "+navigator.audioSession.state+" ("+navigator.audioSession.type+")"));
+  }
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
 <script>
 "use strict";
@@ -430,7 +494,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "25 (sprint shows answers)";
+const APP_VERSION = "31 (audio debug log + reset)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -476,7 +540,7 @@ let S = load();
 function load(){ try{ return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem("hablemos.v1")||"{}")); }catch(e){ return {...DEFAULTS}; } }
 function save(){ try{ localStorage.setItem("hablemos.v1", JSON.stringify(S)); }catch(e){} }
 
-function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); }
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); if(window.DBG) DBG.log("nav",id); }
 function toast(msg, ms=2200){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none", ms); }
 function seg(id, key, onChange){
   const el=$(id);
@@ -528,8 +592,9 @@ async function say(text, rate){
   try{
     const url=await synth(text, rate ?? S.speed);
     if(my!==sayTok) return;
+    DBG.log("play","say: "+String(text).slice(0,40));
     await new Promise(res=>{ const p=$("#player"); p.pause(); p.onended=res; p.onerror=res; p.src=url; p.play().catch(()=>res()); });
-  }catch(e){ if(my===sayTok) toast("Voice error: "+e.message, 4000); }
+  }catch(e){ DBG.log("error","voice: "+e.message); if(my===sayTok) toast("Voice error: "+e.message, 4000); }
 }
 function prefetch(text, rate){ synth(text, rate ?? S.speed).catch(()=>{}); }
 // Sound effects are short WAVs generated in code and played through <audio> elements, which keep
@@ -756,6 +821,8 @@ function startRec(opts={}){
   cfg.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs,"1500");
   audioCfg=sdk.AudioConfig.fromDefaultMicrophoneInput();
   rec=new sdk.SpeechRecognizer(cfg, audioCfg);
+  DBG.log("mic","startRec "+(opts.locale||RECOG_LOCALE)+(opts.ref?" (practice)":""));
+  hookRecLog(rec,"rec");
   if(assess){
     const pa=new sdk.PronunciationAssessmentConfig(opts.ref||"", sdk.PronunciationAssessmentGradingSystem.HundredMark,
               sdk.PronunciationAssessmentGranularity.Phoneme, !!opts.ref);
@@ -769,14 +836,15 @@ function startRec(opts={}){
       finalText=(finalText+" "+e.result.text).trim(); recText=finalText; live.textContent=finalText;
     }
   };
-  rec.canceled=(s,e)=>{ if(e.reason===sdk.CancellationReason.Error){ toast("Mic/Azure error: "+e.errorDetails,5000); stopRec(true); if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#clearBtn").classList.remove("on"); $("#live").textContent=""; } } };
-  rec.startContinuousRecognitionAsync(()=>{}, err=>{ toast("Couldn't start mic: "+err,5000); stopRec(true); });
+  rec.canceled=(s,e)=>{ DBG.log("error","rec canceled: reason="+e.reason+" code="+e.errorCode+" "+(e.errorDetails||"")); if(e.reason===sdk.CancellationReason.Error){ micTrouble("Mic/Azure error: "+e.errorDetails); stopRec(true); if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#clearBtn").classList.remove("on"); $("#live").textContent=""; } } };
+  rec.startContinuousRecognitionAsync(()=>DBG.log("mic","rec listening"), err=>{ DBG.log("error","rec start failed: "+err); micTrouble("Couldn't start mic: "+err); stopRec(true); });
 }
 function stopRec(abort){
   return new Promise(res=>{
     const r=rec; rec=null;
     if(r&&recStarted){ trackAzure("sttSec",(Date.now()-recStarted)/1000); recStarted=0; }
-    const done=()=>{ try{ r&&r.close(); }catch(e){} try{ audioCfg&&audioCfg.close(); }catch(e){} audioCfg=null; res(); };
+    const ac=audioCfg;
+    const done=()=>{ try{ r&&r.close(); }catch(e){} try{ ac&&ac.close(); }catch(e){} if(audioCfg===ac) audioCfg=null; DBG.log("mic","stopRec"+(abort?" (abort)":"")); sweepMic(); res(); };
     if(!r) return res();
     if(abort) return done();
     r.stopContinuousRecognitionAsync(done, done);
@@ -1149,7 +1217,7 @@ async function practiceTap(){
 let settingsFrom="s-home";
 function openSettings(){
   $("#azKey").value=S.azKey; $("#azRegion").value=S.azRegion; $("#clKey").value=S.clKey; $("#model").value=S.model;
-  $("#budget").value=S.budget||""; $("#usageBox").innerHTML=usageHTML();
+  $("#budget").value=S.budget||""; $("#usageBox").innerHTML=usageHTML(); renderDebug();
   $("#testOut").textContent=""; show("s-settings");
 }
 function readSettings(){
@@ -1706,12 +1774,15 @@ function listenOnce(){
     if(sdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs!==undefined) cfg.setProperty(sdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,"6000");
     const ac=sdk.AudioConfig.fromDefaultMicrophoneInput(); const r=new sdk.SpeechRecognizer(cfg,ac);
     new sdk.PronunciationAssessmentConfig("",sdk.PronunciationAssessmentGradingSystem.HundredMark,sdk.PronunciationAssessmentGranularity.Phoneme,false).applyTo(r);
-    const t0=Date.now();
-    const fin=()=>{ trackAzure("sttSec",(Date.now()-t0)/1000); try{r.close();}catch(e){} try{ac.close();}catch(e){} };
+    const t0=Date.now(); onceActive++; DBG.log("mic","listenOnce start"); hookRecLog(r,"once");
+    const fin=()=>{ trackAzure("sttSec",(Date.now()-t0)/1000); try{r.close();}catch(e){} try{ac.close();}catch(e){} onceActive=Math.max(0,onceActive-1); sweepMic(); };
     r.recognizeOnceAsync(result=>{
       let j=null; try{ j=JSON.parse(result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult)); }catch(e){}
+      DBG.log("mic","listenOnce result: reason="+result.reason+(result.text?" text="+JSON.stringify(result.text):" (nothing heard)")+" in "+(Date.now()-t0)+"ms");
+      if(result.reason!==sdk.ResultReason.RecognizedSpeech) noHearCount++; else noHearCount=0;
+      if(noHearCount>=3) micTrouble("Heard nothing 3 times in a row.");
       fin(); res(result.reason===sdk.ResultReason.RecognizedSpeech&&j?aggregate([j]):{text:"",words:[],pron:null});
-    }, err=>{ fin(); rej(new Error(String(err))); });
+    }, err=>{ DBG.log("error","listenOnce error: "+err); fin(); rej(new Error(String(err))); });
   });
 }
 async function vocabMic(){
@@ -2228,6 +2299,7 @@ function startNameStream(onFinal,onPartial){
   cfg.speechRecognitionLanguage=RECOG_LOCALE; cfg.outputFormat=sdk.OutputFormat.Detailed;
   cfg.setProperty(sdk.PropertyId.Speech_SegmentationSilenceTimeoutMs,"600");
   nameAc=sdk.AudioConfig.fromDefaultMicrophoneInput(); nameRec=new sdk.SpeechRecognizer(cfg,nameAc);
+  DBG.log("mic","Name it stream start"); hookRecLog(nameRec,"name");
   new sdk.PronunciationAssessmentConfig("",sdk.PronunciationAssessmentGradingSystem.HundredMark,sdk.PronunciationAssessmentGranularity.Phoneme,false).applyTo(nameRec);
   nameRec.recognizing=(s,e)=>onPartial(e.result.text);
   nameRec.recognized=(s,e)=>{
@@ -2235,14 +2307,15 @@ function startNameStream(onFinal,onPartial){
     let j=null; try{ j=JSON.parse(e.result.properties.getProperty(sdk.PropertyId.SpeechServiceResponse_JsonResult)); }catch(err){}
     if(j) onFinal(aggregate([j]));
   };
-  nameRec.canceled=(s,e)=>{ if(e.reason===sdk.CancellationReason.Error){ toast("Mic/Azure error: "+e.errorDetails,5000); stopNameStream(); } };
+  nameRec.canceled=(s,e)=>{ DBG.log("error","name canceled: code="+e.errorCode+" "+(e.errorDetails||"")); if(e.reason===sdk.CancellationReason.Error){ micTrouble("Mic/Azure error: "+e.errorDetails); stopNameStream(); } };
   nameT0=Date.now();
   nameRec.startContinuousRecognitionAsync(()=>{}, err=>{ toast("Couldn't start mic: "+err,5000); stopNameStream(); });
 }
 function stopNameStream(){
   if(nameT0){ trackAzure("sttSec",(Date.now()-nameT0)/1000); nameT0=0; }
   const r=nameRec, a=nameAc; nameRec=null; nameAc=null;
-  if(r) r.stopContinuousRecognitionAsync(()=>{ try{r.close();}catch(e){} try{a&&a.close();}catch(e){} }, ()=>{ try{r.close();}catch(e){} });
+  const fin=()=>{ try{r.close();}catch(e){} try{a&&a.close();}catch(e){} DBG.log("mic","Name it stream stopped"); sweepMic(); };
+  if(r) r.stopContinuousRecognitionAsync(fin, fin);
 }
 async function renderName(){
   const g=game;
@@ -2942,6 +3015,70 @@ document.addEventListener("click",e=>{
   t.classList.add("hit"); setTimeout(()=>t.classList.remove("hit"),600);
   say(t.dataset.w,"-30%");
 },true);
+
+/* ---------- audio watchdog, reset and debug UI ---------- */
+let onceActive=0, noHearCount=0, troubleShown=0;
+function hookRecLog(r,tag){
+  r.sessionStarted=()=>DBG.log("mic",tag+": session started");
+  r.sessionStopped=()=>DBG.log("mic",tag+": session stopped");
+  r.speechStartDetected=()=>DBG.log("mic",tag+": speech detected");
+}
+// After any recognizer closes, make sure no microphone is left open (a leftover open mic is what
+// keeps iOS stuck in "call" audio mode and blocks the next recording).
+function sweepMic(){
+  setTimeout(()=>{
+    if(rec||nameRec||onceActive) return;
+    let n=0; for(const s of [...DBG.streams]) for(const t of s.getTracks()) if(t.readyState==="live"){ try{ t.stop(); n++; }catch(e){} }
+    if(n) DBG.log("mic","sweep: closed "+n+" leftover mic stream(s)");
+  },600);
+}
+function micTrouble(msg){
+  DBG.log("error","mic trouble: "+msg+" · "+JSON.stringify(DBG.status()));
+  if(Date.now()-troubleShown<8000) return; troubleShown=Date.now();
+  toast(msg+" Tap 🔧 to reset audio.",6000);
+}
+function attachPlayerLog(el){
+  ["error","stalled"].forEach(ev=>el.addEventListener(ev,()=>DBG.log("play","player "+ev+(el.error?" code="+el.error.code:""))));
+  el.addEventListener("pause",()=>{ if(el.currentTime>0&&!el.ended&&el.currentTime<(el.duration||0)-0.05) DBG.log("play","player paused mid-clip"); });
+}
+attachPlayerLog($("#player"));
+async function resetAudio(reason){
+  DBG.log("user","🔧 AUDIO RESET ("+reason+") before: "+JSON.stringify(DBG.status()));
+  try{ if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#clearBtn").classList.remove("on"); $("#live").textContent=""; } await stopRec(true); }catch(e){}
+  try{ stopNameStream(); }catch(e){}
+  if(askRecMode){ askRecMode=null; }
+  for(const s of [...DBG.streams]) for(const t of s.getTracks()){ try{ t.stop(); }catch(e){} }
+  DBG.streams.clear();
+  for(const c of [...DBG.ctxs]){ if(c.state!=="closed"){ try{ await c.close(); }catch(e){} } }
+  sayTok++;
+  const old=$("#player"); try{ old.pause(); old.removeAttribute("src"); old.load(); }catch(e){}
+  const n=document.createElement("audio"); n.id="player"; n.setAttribute("playsinline",""); old.replaceWith(n); attachPlayerLog(n);
+  for(const k of Object.keys(SFX)) delete SFX[k];
+  unlocked=false; noHearCount=0;
+  if(navigator.audioSession){ try{ navigator.audioSession.type="playback"; navigator.audioSession.type="auto"; }catch(e){} }
+  setTimeout(()=>DBG.log("user","after reset: "+JSON.stringify(DBG.status())),700);
+  toast("Audio reset. Try the mic again. (Logged for debugging)",4000);
+}
+$("#fixAudio").onclick=()=>{ unlockAudio(); resetAudio("chat 🔧"); };
+$("#gameFix").onclick=()=>{ unlockAudio(); resetAudio("game 🔧"); };
+const pad=n=>String(n).padStart(2,"0");
+function logText(){
+  const st=DBG.status();
+  return `Hablemos debug log · v${APP_VERSION} · ${new Date().toLocaleString()}\nNow: ${JSON.stringify(st)}\n\n`+
+    DBG.lines().map(([t,ty,m])=>{ const d=new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3,"0")} [${ty}] ${m}`; }).join("\n");
+}
+function renderDebug(){
+  const st=DBG.status(), n=DBG.lines().length;
+  $("#dbgBox").innerHTML=`<div class="usage" style="font-size:13.5px">Open mic streams: <b>${st.openMicStreams}</b>${st.mutedMic?` (${st.mutedMic} muted)`:""} · Audio engines: <b>${esc(st.audioContexts)}</b> · iOS audio session: <b>${esc(st.audioSession)}</b><br><span class="note" style="margin:0">${n} log entries saved on this phone</span></div>
+    <div class="row" style="margin-top:8px"><button class="btn ghost" id="dbgShare">📤 Share log</button><button class="btn ghost" id="dbgView">View</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn ghost" id="dbgReset">🔧 Reset audio</button><button class="btn ghost" id="dbgClear">Clear log</button></div>`;
+  $("#dbgShare").onclick=async()=>{ const txt=logText();
+    try{ if(navigator.share){ await navigator.share({title:"Hablemos debug log",text:txt}); return; } }catch(e){ if(e.name==="AbortError") return; }
+    try{ await navigator.clipboard.writeText(txt); toast("Log copied. Paste it to Claude."); }catch(e){ openSheet(`<h2>Debug log</h2><textarea style="height:60vh;font:11px monospace">${esc(txt)}</textarea>`); } };
+  $("#dbgView").onclick=()=>openSheet(`<h2>Debug log</h2><pre class="dbg">${esc(logText().split("\n").slice(-200).join("\n"))}</pre><button class="btn ghost" onclick="closeSheet()">Close</button>`);
+  $("#dbgReset").onclick=()=>{ resetAudio("settings"); setTimeout(renderDebug,800); };
+  $("#dbgClear").onclick=()=>{ DBG.clear(); DBG.log("app","log cleared"); renderDebug(); };
+}
 
 /* ---------- boot ---------- */
 $("#appVer").textContent=APP_VERSION;
