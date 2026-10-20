@@ -219,6 +219,8 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
 .pchip small{opacity:.7;font-weight:700}.pchip.g{color:var(--good)}.pchip.o{color:var(--ok)}.pchip.b{color:var(--bad)}
 .pfix{background:#121b21;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;font-size:14.5px}.pfix ul{margin:6px 0 0;padding-left:18px;color:#c9d6de}
 img.emo{width:1.18em;height:1.18em;margin:-0.09em;vertical-align:-0.2em;display:inline-block;pointer-events:none}
+.undo{align-self:flex-end;font-size:13px;font-weight:600;padding:5px 11px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);margin-top:-6px}
+.undo:active{background:var(--panel)}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .phon{font-size:13.5px;color:var(--accent);margin-top:2px}
 #askLive{min-height:18px;font-size:14px;color:var(--muted);margin-top:6px}
@@ -815,6 +817,7 @@ function addTutor(d){
   session.transcript.push("TUTOR: "+d.reply);
   $("#chat").appendChild(el); scrollDown();
   if(S.autoplay==="1") say(d.reply);
+  return el;
 }
 function addYou(turn){
   const el=document.createElement("div"); el.className="msg you";
@@ -828,6 +831,7 @@ function addYou(turn){
   } else el.innerHTML=`<div class="es">${esc(turn.text)}</div>`;
   $("#chat").appendChild(el); scrollDown();
   session.transcript.push("LEARNER: "+turn.text);
+  turn.el=el;
 }
 function addFeedback(turn, d){
   const el=document.createElement("div"); el.className="fb";
@@ -853,6 +857,7 @@ function addFeedback(turn, d){
     const b=e.target.closest("[data-say]"); if(b) say(b.dataset.say, b.dataset.rate||"-15%");
   });
   $("#chat").appendChild(el); scrollDown();
+  return el;
 }
 function scrollDown(){ const s=$("#chatScroll"); requestAnimationFrame(()=>s.scrollTop=s.scrollHeight); }
 function setBusy(b, label){
@@ -874,7 +879,7 @@ async function startSession(opts={}){
     if(!opts.custom){ S.custom=txt; save(); }
     sc={...sc, t:opts.custom?"Custom":sc.t, role:`a natural participant in this situation described by the learner: "${txt}". Choose the most fitting role for yourself`};
   }
-  session={id:Date.now(), started:Date.now(), level:S.level, scenario:sc, messages:[], log:[], lastHint:"", transcript:[],
+  session={undo:[], id:Date.now(), started:Date.now(), level:S.level, scenario:sc, messages:[], log:[], lastHint:"", transcript:[],
            goal:opts.goal||null, planIdx:opts.planIdx??null, reviewedAt:0};
   $("#chat").innerHTML=""; $("#live").textContent="";
   $("#chatTitle").textContent=sc.ic+" "+sc.t;
@@ -891,6 +896,8 @@ async function turn(t){
     const ws=t.words.map(w=>`${w.w} ${w.s}${w.err!=="None"?" ["+w.err+"]":""}${w.s<75&&w.ph.length?" {"+w.ph.map(p=>p.p+":"+p.s).join(" ")+"}":""}`).join(", ");
     content=`LEARNER SAID (speech recognition): "${t.text}"\nOVERALL: pronunciation ${t.pron}, accuracy ${t.acc}, fluency ${t.flu}\nWORD SCORES: ${ws}`;
   }
+  const snap=t.kind==="start"?null:{msgLen:session.messages.length, trLen:session.transcript.length-1, hint:session.lastHint,
+    trouble:JSON.parse(JSON.stringify(P.trouble)), userEl:t.el};
   session.messages.push({role:"user",content});
   setBusy(true, t.kind==="start"?"Setting the scene…":"Tutor is thinking…");
   try{
@@ -898,17 +905,46 @@ async function turn(t){
     session.messages.push({role:"assistant",content:JSON.stringify(d)});
     setBusy(false);
     if(t.kind!=="start"){
-      addFeedback(t,d);
+      snap.fbEl=addFeedback(t,d);
       session.log.push({said:t.text, pron:t.pron, flu:t.flu, ok:!(d.correction&&d.correction.corrected),
         low:(t.words||[]).filter(w=>w.s<70).map(w=>w.w), correction:d.correction});
       trackWords(t.words); saveSessionStats();
     }
     session.lastHint=d.hint||"";
-    addTutor(d);
+    const tutorEl=addTutor(d);
+    if(snap){ snap.tutorEl=tutorEl; snap.prevReply=session.prevReply; session.undo.push(snap); }
+    session.prevReply=d.reply;
+    showUndo();
   }catch(e){
     session.messages.pop(); setBusy(false);
     const el=document.createElement("div"); el.className="typing err"; el.textContent="⚠︎ "+e.message; $("#chat").appendChild(el); scrollDown();
+    if(snap){ snap.errEl=el; snap.failed=true; session.undo.push(snap); session.transcript.length=snap.trLen; showUndo(); }
   }
+}
+// "Try that one again": unsend the last answer and the tutor's reply, back to the previous question.
+function showUndo(){
+  document.querySelectorAll("#chat .undo").forEach(x=>x.remove());
+  const last=session&&session.undo[session.undo.length-1]; if(!last||!last.userEl) return;
+  const b=document.createElement("button"); b.className="undo"; b.textContent="↩︎ Try that one again";
+  b.onclick=undoLast; last.userEl.insertAdjacentElement("afterend",b);
+}
+async function undoLast(){
+  if(busy) return;
+  if(recording){ recording=false; $("#mic").classList.remove("rec"); $("#clearBtn").classList.remove("on"); await stopRec(true); }
+  const r=session.undo.pop(); if(!r) return;
+  [r.userEl,r.fbEl,r.tutorEl,r.errEl].forEach(x=>x&&x.remove());
+  document.querySelectorAll("#chat .undo").forEach(x=>x.remove());
+  session.messages.length=r.msgLen; session.transcript.length=r.trLen; session.lastHint=r.hint;
+  if(!r.failed){
+    P.trouble=r.trouble; session.log.pop();
+    if(session.log.length) saveSessionStats();
+    else { P.sessions=P.sessions.filter(s=>s.id!==session.id); saveP(); }
+    session.prevReply=r.prevReply;
+  }
+  $("#live").textContent="";
+  showUndo(); scrollDown();
+  toast("Unsent. Answer again.");
+  if(session.prevReply) say(session.prevReply);
 }
 
 async function micTap(){

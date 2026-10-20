@@ -17,7 +17,7 @@ Keys live only in the phone's browser storage, never in the code/repo.
 
 ## Using it
 - Pick a scenario (or Custom), level, tutor accent/voice/speed -> Start. Or tap **Start today's session** to run the next item in your training plan.
-- Tap mic, speak, tap again to send. **✕ Clear & redo** throws away a bad recording while you're still talking.
+- Tap mic, speak, tap again to send. **✕ Clear & redo** throws away a bad recording while you're still talking. **↩︎ Try that one again** (under your last message) unsends your answer and the tutor's reply so you can answer that question again; tap it repeatedly to step back further.
 - Words are underlined green / yellow / red; tap one to hear it.
 - Feedback card: scores, corrected sentence, "more natural" version, pronunciation tips (each with play).
 - ❓ = ask anything in English (typed or spoken): meanings, "how do I say...", grammar. Then **Practice saying it** for a scored attempt. **❓ Explain** on any tutor line breaks it down.
