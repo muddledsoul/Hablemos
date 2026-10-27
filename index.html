@@ -209,6 +209,15 @@ table.conj{width:100%;border-collapse:collapse;font-size:16px}table.conj td,tabl
 .lground{position:absolute;left:0;right:0;top:70%;height:2px;background:#9ccc65}
 .lem{position:absolute;transform:translate(-50%,-50%);line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.3))}
 .ldash{position:absolute;width:0;border-left:2px dashed #78909c;transform:translateX(-50%)}
+.lwho{position:absolute;transform:translate(-50%,-50%);font-size:4.6cqw;font-weight:800;color:#37474f;background:#fff;border-radius:6px;padding:0 1.4cqw;line-height:1.5;box-shadow:0 1px 2px rgba(0,0,0,.2);z-index:4;white-space:nowrap}
+.lwho.yo{background:#ffe082}
+.lstage.scene{aspect-ratio:360/230;background:linear-gradient(#d6efff 0 72%,#c5e1a5 72%)}
+.lem.it{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.lem.it::after{content:"";position:absolute;inset:-25%}
+.lem.ask{animation:askp 1.1s ease-in-out infinite}
+@keyframes askp{0%,100%{filter:drop-shadow(0 0 0 #ffd54f)}50%{filter:drop-shadow(0 0 1.6cqw #ffb300) drop-shadow(0 0 1.6cqw #ffb300)}}
+.lem.ok{filter:drop-shadow(0 0 1.4cqw #00e676) drop-shadow(0 0 1.4cqw #00e676)}
+.lem.bad{filter:drop-shadow(0 0 1.4cqw #ff1744) drop-shadow(0 0 1.4cqw #ff1744)}
 .lmark{position:absolute;top:84%;width:6px;height:6px;border-radius:50%;background:#546e7a;transform:translateX(-50%)}
 .ltag{position:absolute;top:88%;transform:translateX(-50%);font-size:5cqw;color:#37474f;font-weight:700}
 .opt.pic .lstage{pointer-events:none}
@@ -500,7 +509,7 @@ function tapWords(text){
     return w?`<span class="tw" data-w="${esc(w)}">${esc(tok)}</span>`:esc(tok);
   }).join("");
 }
-const APP_VERSION = "33 (word list)";
+const APP_VERSION = "34 (Find it! scene game)";
 
 const VOICES = {
   MX:{name:"Mexico",loc:"es-MX",F:"es-MX-DaliaNeural",M:"es-MX-JorgeNeural"},
@@ -2906,7 +2915,7 @@ function locMake(k){
   const L=locBy(k), s=LOC_SUBJ[Math.floor(Math.random()*LOC_SUBJ.length)], pl=s[1].startsWith("las ");
   const verb=pl?"están":"está", Verb=verb.charAt(0).toUpperCase()+verb.slice(1);
   if(L.g==="deictic"){
-    return {k, s, ref:null, es:`${cap(s[1])} ${verb} ${L.es}.`, en:`${cap(s[2])} ${pl?"are":"is"} ${L.en.replace(/ \(.*\)/,"")}.`};
+    return {k, s, ref:null, lay:{mir:Math.random()<.5,spk:Math.random()<.5?0:1}, es:`${cap(s[1])} ${verb} ${L.es}.`, en:`${cap(s[2])} ${pl?"are":"is"} ${L.en.replace(/ \(.*\)/,"")}.`};
   }
   const refs=LOC_REF.filter(r=>r[4].includes(k)), r=refs[Math.floor(Math.random()*refs.length)];
   const target=k==="between"?r[2]:r[1];
@@ -2914,15 +2923,25 @@ function locMake(k){
   return {k, s, ref:r, es:`${cap(s[1])} ${verb} ${phrase}.`, en:`${cap(s[2])} ${pl?"are":"is"} ${L.en} ${k==="between"?"the two "+r[3].replace("the ","").replace(/x$/,"xe")+"s":r[3]}.`};
 }
 // Draw the little scene (300x190 stage). Positions in %, sizes in stage-width units.
-function locStage(q, small){
+function locStage(q, small, teach){
   const em=(e,x,y,size,z=1,extra="")=>`<span class="lem" style="left:${x}%;top:${y}%;font-size:${size}cqw;z-index:${z};${extra}">${e}</span>`;
   let h=`<div class="lground"></div>`;
   const S=q.s[0];
   if(!q.ref){
-    h+=em("🧍",12,62,17,2)+em("👉",23,52,9,3);
-    const pos={here:[33,66,14],there:[58,64,11],overthere:[86,48,7]}[q.k];
-    h+=`<div class="lmark" style="left:${pos[0]}%"></div>`+em(S,pos[0],pos[1],pos[2],2);
-    h+=`<div class="ltag" style="left:31%">aquí</div><div class="ltag" style="left:56%">ahí</div><div class="ltag" style="left:84%">allá</div>`;
+    // Two people talking. The yellow "yo 💬" is the speaker, "tú" is the listener.
+    // aquí = next to yo, ahí = next to tú, allá = far from both. Layout is mirrored and the
+    // speaker swaps at random, so the answer can't be learned from left/middle/right.
+    const lay=q.lay||{mir:false,spk:0}, X=x=>lay.mir?100-x:x;
+    const pA=26, pB=56, outA=13, outB=69, far=91;
+    const spX=lay.spk?pB:pA, liX=lay.spk?pA:pB, spOut=lay.spk?outB:outA, liOut=lay.spk?outA:outB;
+    h+=em("🧍",X(pA),62,17,2)+em("🧍‍♀️",X(pB),62,17,2);
+    h+=`<div class="lwho yo" style="left:${X(spX)}%;top:36%">yo 💬</div><div class="lwho" style="left:${X(liX)}%;top:36%">tú</div>`;
+    const pos={here:[spOut,70,12],there:[liOut,70,12],overthere:[far,64,7]}[q.k];
+    h+=em(S,X(pos[0]),pos[1],pos[2],3);
+    if(teach){
+      h+=`<div class="lmark" style="left:${X(pos[0])}%"></div>`;
+      h+=`<div class="ltag" style="left:${X(spOut)}%">aquí</div><div class="ltag" style="left:${X(liOut)}%">ahí</div><div class="ltag" style="left:${X(far)}%">allá</div>`;
+    }
     return `<div class="lstage${small?" small":""}">${h}</div>`;
   }
   const R=q.ref[0];
@@ -2953,24 +2972,25 @@ function openLocTopic(){
     <button class="mode" data-lmode="lesson"><span class="mi">📘</span><span><b>Lesson</b><br><span class="note" style="margin:0">Every phrase with a picture: encima de, debajo de, al lado de, aquí / ahí / allá…</span></span></button>
     <button class="mode" data-lmode="quiz"><span class="mi">🔤</span><span><b>¿Dónde está?</b><br><span class="note" style="margin:0">Look at the picture, pick where it is</span></span></button>
     <button class="mode" data-lmode="listen"><span class="mi">👂</span><span><b>Listen & tap</b><br><span class="note" style="margin:0">Hear the sentence, tap the matching picture</span></span></button>
-    <button class="mode" data-lmode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">Describe where it is out loud</span></span></button>`;
+    <button class="mode" data-lmode="say"><span class="mi">🎤</span><span><b>Say it</b><br><span class="note" style="margin:0">Describe where it is out loud</span></span></button>
+    <button class="mode" data-lmode="scene"><span class="mi">🏡</span><span><b>Find it! Scene game</b><br><span class="note" style="margin:0">Your vocab words hidden around a scene. Tracks which phrases and words are solid. ${(()=>{const s=(V.best||{}).scene; if(!s) return ""; const n=LOC.filter(l=>((s.p||{})[l.k]||{}).st>=3).length; return n+"/"+LOC.length+" phrases solid.";})()}</span></span></button>`;
   curSetId=null; $("#setBack").onclick=openGrammar; show("s-set");
 }
 $("#setBody").addEventListener("click",e=>{
   const m=e.target.closest("[data-lmode]"); if(!m) return; e.stopPropagation(); unlockAudio();
-  ({lesson:locLesson,quiz:locQuiz,listen:locListen,say:locSay})[m.dataset.lmode]();
+  ({lesson:locLesson,quiz:locQuiz,listen:locListen,say:locSay,scene:locScene})[m.dataset.lmode]();
 },true);
 const locBack=()=>openLocTopic();
 function locLesson(){
   game={kind:"lesson",back:locBack}; gameShell("📘 Where is it?","");
-  const card=k=>{ const q=locMake(k), L=locBy(k);
-    return `<div class="sec">${locStage(q,false)}<div style="margin-top:8px;font-size:19px;font-weight:700">${esc(L.es)} <span class="note" style="font-size:14px;font-weight:400">· ${esc(L.en)}</span></div>
+  const card=k=>{ const q=locMake(k), L=locBy(k); if(q.lay) q.lay={mir:false,spk:0};
+    return `<div class="sec">${locStage(q,false,true)}<div style="margin-top:8px;font-size:19px;font-weight:700">${esc(L.es)} <span class="note" style="font-size:14px;font-weight:400">· ${esc(L.en)}</span></div>
       <div class="line" style="display:flex;gap:8px;align-items:center;margin-top:4px"><div class="tx" style="flex:1">${tapWords(q.es)}<div class="note" style="margin:0">${esc(q.en)}</div></div><button class="play" data-say="${esc(q.es)}">▶︎</button></div>
       ${L.note?`<div class="note">${esc(L.note)}</div>`:""}</div>`; };
   gbody(`<div class="sec"><h3>Use <span class="estar-t">estar</span> for location</h3><p style="margin:0">¿Dónde <b>está</b> el gato? El gato <b>está</b> encima de la caja.</p>
       <p class="note">Most of these end in <b>de</b>. Watch the contraction: <b>de + el = del</b>: debajo <b>del</b> carro, but debajo <b>de la</b> mesa.</p></div>
     ${LOC.filter(l=>l.g!=="deictic").map(l=>card(l.k)).join("")}
-    <div class="sec"><h3>Here, there, over there</h3><p class="note" style="margin-top:0">Spanish has three distances, measured from the people talking.</p></div>
+    <div class="sec"><h3>Here, there, over there</h3><p class="note" style="margin-top:0">Spanish has three distances, measured from the people talking. In the pictures, the yellow <b>yo 💬</b> is the one talking and <b>tú</b> is the one listening. In practice the labels aquí / ahí / allá are hidden, the picture can be flipped, and either person can be the one talking, so look at who says <b>yo</b>.</p></div>
     ${["here","there","overthere"].map(card).join("")}
     <button class="btn" id="locToQuiz">Practice: ¿Dónde está? ›</button>`);
   $("#locToQuiz").onclick=locQuiz;
@@ -2990,19 +3010,20 @@ function locEnd(field,again,label){
     <button class="btn" id="lcAgain">Play again</button><div style="height:10px"></div><button class="btn ghost" id="lcBack">Back</button></div>`);
   $("#lcAgain").onclick=again; $("#lcBack").onclick=locBack;
 }
+const locDeicHint=q=>q.ref?"":`<div class="note" style="text-align:center;margin:2px 0 0">You are <b>yo 💬</b>, the one talking. Is it by you, by <b>tú</b>, or far from both of you?</div>`;
 function renderLocQuiz(){
   const g=game; $("#gameSub").textContent=`${g.total-g.queue.length}/${g.total} · ${g.firstTry} right first try`;
   if(!g.queue.length) return locEnd("quiz",locQuiz,"first try");
   const q=g.queue[0], opts=locOptions(q.k);
   const subj=`${cap(q.s[1])} ${q.s[1].startsWith("las ")?"están":"está"}`;
-  gbody(`${locStage(q,false)}<div class="gq">¿Dónde ${q.s[1].startsWith("las ")?"están":"está"} ${esc(q.s[1])}?</div>
+  gbody(`${locStage(q,false)}<div class="gq">¿Dónde ${q.s[1].startsWith("las ")?"están":"está"} ${esc(q.s[1])}?</div>${locDeicHint(q)}
     <div class="opts" style="margin-top:10px">${opts.map(o=>`<button class="opt" data-k="${o.k}">${esc(o.es)}</button>`).join("")}</div><div id="lqExp"></div>`);
   $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
     if(g.lock) return; g.lock=true;
     const right=b.dataset.k===q.k; b.classList.add(right?"right":"wrong");
     if(!right) $("#gameBody").querySelector(`.opt[data-k="${q.k}"]`).classList.add("right");
     if(right&&!g.seen.has(g.queue.length)) g.firstTry++; g.seen.add(g.queue.length);
-    $("#lqExp").innerHTML=`<div class="rule estar"><b>${esc(q.es)}</b><div>${esc(q.en)}</div></div><button class="btn" id="lqNext" style="margin-top:10px">Next ›</button>`;
+    const Lq=locBy(q.k); $("#lqExp").innerHTML=`<div class="rule estar"><b>${esc(q.es)}</b><div>${esc(q.en)}</div>${!q.ref&&Lq.note?`<div class="note" style="margin:4px 0 0">${esc(Lq.note)}</div>`:""}</div><button class="btn" id="lqNext" style="margin-top:10px">Next ›</button>`;
     right?chime(true):chime(false); say(q.es,"-10%");
     $("#lqNext").onclick=()=>{ g.lock=false; g.queue.shift(); if(!right) g.queue.splice(Math.min(g.queue.length,4),0,locMake(q.k)); renderLocQuiz(); };
   });
@@ -3012,10 +3033,10 @@ function renderLocListen(){
   const g=game; $("#gameSub").textContent=`${g.total-g.queue.length}/${g.total} · ${g.firstTry} right first try`;
   if(!g.queue.length) return locEnd("listen",locListen,"first try");
   const q=g.queue[0]; g.tries=0;
-  const opts=locOptions(q.k).map(o=>o.k===q.k?q:Object.assign(locMake(o.k),{s:q.s}));
+  const opts=locOptions(q.k).map(o=>o.k===q.k?q:Object.assign(locMake(o.k),{s:q.s},q.lay?{lay:q.lay}:{}));
   gbody(`<div class="helper"><span class="hav">🧑‍🏫</span><div class="bubble"><div class="hn">Profe</div><div class="ht" id="llText" style="${g.showText?"":"filter:blur(6px)"}">${esc(q.es)}</div></div></div>
     <div class="row" style="margin:8px 0"><button class="btn ghost" id="llHear">🔊 Hear again</button><button class="btn ghost" id="llShow">${g.showText?"Hide text":"Show text"}</button></div>
-    <div class="pgrid">${opts.map((o,i)=>`<button class="opt pic" data-i="${i}" style="padding:4px">${locStage(o,true)}</button>`).join("")}</div><div id="llMsg" class="note" style="text-align:center;min-height:22px;margin-top:8px"></div>`);
+    ${q.ref?"":`<div class="note" style="text-align:center;margin:0 0 6px">Profe is <b>yo 💬</b>. Tap the picture that matches.</div>`}<div class="pgrid">${opts.map((o,i)=>`<button class="opt pic" data-i="${i}" style="padding:4px">${locStage(o,true)}</button>`).join("")}</div><div id="llMsg" class="note" style="text-align:center;min-height:22px;margin-top:8px"></div>`);
   say(q.es,"-10%");
   $("#llHear").onclick=()=>say(q.es,"-25%");
   $("#llShow").onclick=()=>{ g.showText=!g.showText; $("#llText").style.filter=g.showText?"":"blur(6px)"; $("#llShow").textContent=g.showText?"Hide text":"Show text"; };
@@ -3031,7 +3052,7 @@ function renderLocSay(){
   const g=game; $("#gameSub").textContent=`${g.total-g.queue.length+1>g.total?g.total:g.total-g.queue.length+1}/${g.total} · ${g.firstTry} correct`;
   if(!g.queue.length) return locEnd("say",locSay,"correct");
   const q=g.queue[0], L=locBy(q.k); g.tries=0; g.peek=false;
-  gbody(`${locStage(q,false)}<div class="gq">¿Dónde ${q.s[1].startsWith("las ")?"están":"está"} ${esc(q.s[1])}?</div>
+  gbody(`${locStage(q,false)}<div class="gq">¿Dónde ${q.s[1].startsWith("las ")?"están":"está"} ${esc(q.s[1])}?</div>${locDeicHint(q)}
     <div id="lsHint" class="gq" style="font-size:17px;display:none">${tapWords(q.es)}</div>
     <div style="text-align:center;margin-top:12px"><button id="lsMic" class="bigmic"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg></button><div class="note" id="lsLbl" style="margin-top:6px">Tap and answer in a full sentence</div></div>
     <div id="lsRes" class="vres" style="text-align:center"></div>
@@ -3059,6 +3080,194 @@ function renderLocSay(){
       if(g.tries>=2){ $("#lsHint").style.display="block"; say(q.es,"-10%"); }
     }
   };
+}
+
+/* ---------- Grammar: location scene game ("Find it!") ----------
+   Builds a little scene out of the vocab words Aaron has learned and asks where things are.
+   Mastery per location phrase and per word lives in V.best.scene and steers the next scenes
+   toward what isn't solid yet. */
+const SC_SKIP=new Set(["colors","feelings","weather","actions","body"]);
+const SC_REF=LOC_REF.concat([["🛋️","el sofá","los dos sofás","the sofa",["top","under","beside","front","behind","near","far","right","left"]]]);
+const SC_VERT=["top","above","under","inside","front","behind"];
+const SC_SOLID=3;
+function scStore(){ V.best=V.best||{}; const s=V.best.scene=V.best.scene||{}; s.p=s.p||{}; s.w=s.w||{}; s.scenes=s.scenes||0; return s; }
+const scRec=(m,key)=>m[key]||(m[key]={st:0,ok:0,n:0});
+const scSolid=(m,key)=>(m[key]||{}).st>=SC_SOLID;
+function scMark(kind,key,ok){ const s=scStore(), r=scRec(s[kind],key); r.n++; if(ok){ r.ok++; r.st++; } else r.st=0; }
+function scWeight(kind,key){ const r=scStore()[kind][key]; if(!r||!r.n) return 5; return r.st>=SC_SOLID?1:4; }
+function scPick(arr,wf){ const ws=arr.map(wf), t=ws.reduce((a,b)=>a+b,0); let x=Math.random()*t; for(let i=0;i<arr.length;i++){ x-=ws[i]; if(x<=0) return arr[i]; } return arr[arr.length-1]; }
+// Every learned word that works as a thing you can put somewhere
+function scLearned(){
+  const out=[], anchorWords=new Set(SC_REF.map(r=>r[1]));
+  for(const s of VOCAB){ if(SC_SKIP.has(s.id)) continue; const got=new Set(V.learned[s.id]||[]);
+    for(const c of s.w){ if(!got.has(c[1])||!ARTS.test(c[1])||anchorWords.has(c[1])) continue; if(String(c[0]).startsWith("#")) continue; out.push(c); } }
+  return out;
+}
+function scPool(){
+  const learned=scLearned(); let pool=learned.slice(), filler=false;
+  if(pool.length<8){ filler=true; const have=new Set(pool.map(c=>c[1]));
+    for(const id of ["basics","fruits","animals","house"]){ const s=setById(id); if(!s) continue; for(const c of s.w){ if(pool.length>=12) break; if(!have.has(c[1])&&ARTS.test(c[1])&&!SC_REF.some(r=>r[1]===c[1])&&!String(c[0]).startsWith("#")){ pool.push(c); have.add(c[1]); } } } }
+  return {pool, learned:learned.length, filler};
+}
+const scPl=w=>/^(los|las)\s/.test(w);
+const scEnWord=c=>{ const e=String(c[2]).split(" / ")[0].replace(/\s*\(.*\)/,""); return "the "+e; };
+function scPhrase(k,anc,sc){
+  const L=locBy(k);
+  if(L.g==="deictic") return {es:L.es,en:L.en.replace(/ \(.*\)/,"")};
+  if(k==="between") return {es:`entre ${sc.A[1]} y ${sc.B[1]}`, en:`between ${sc.A[3]} and ${sc.B[3]}`};
+  const a=anc==="B"?sc.B:sc.A;
+  return {es:(L.es+" "+a[1]).replace(/\bde el\b/,"del"), en:`${L.en} ${a[3]}`};
+}
+function scSentence(it,sc){ const p=scPhrase(it.k,it.anc,sc), pl=scPl(it.c[1]);
+  return {es:`${cap(it.c[1])} ${pl?"están":"está"} ${p.es}.`, en:`${cap(scEnWord(it.c))} ${pl?"are":"is"} ${p.en}.`, where:p.es}; }
+// ---- build a scene ----
+function scBuild(){
+  const {pool}=scPool(), st=scStore();
+  const deicWeak=["here","there","overthere"].some(k=>!scSolid(st.p,k));
+  const words=[]; const takeWord=()=>{ const left=pool.filter(c=>!words.includes(c)); const recent=new Set(Object.values(V.learned).flatMap(l=>l.slice(-6)));
+    const c=scPick(left,c=>scWeight("w",c[1])+(recent.has(c[1])?2:0)); words.push(c); return c; };
+  const mir=Math.random()<.5;
+  if(Math.random()<(deicWeak?.3:.18)){
+    const lay={mir,spk:Math.random()<.5?0:1};
+    const items=["here","there","overthere"].map(k=>({k,anc:null,c:takeWord()}));
+    return {type:"deic",lay,items};
+  }
+  const [A,B]=shuffle(SC_REF.slice()).slice(0,2);
+  const vert=r=>r[4].filter(k=>SC_VERT.includes(k));
+  const slots=[
+    {id:"vA",anc:"A",k:scPick(vert(A),k=>scWeight("p",k))},
+    {id:"vB",anc:"B",k:null},
+    {id:"oA",anc:"A",k:scPick([mir?"right":"left","beside","near"],k=>scWeight("p",k))},
+    {id:"oB",anc:"B",k:scPick([mir?"left":"right","beside","near"],k=>scWeight("p",k))},
+    {id:"mid",anc:null,k:"between"},
+    {id:"far",anc:"A",k:"far"}];
+  slots[1].k=scPick(vert(B).filter(k=>k!==slots[0].k).concat(vert(B).length===1?vert(B):[]),k=>scWeight("p",k));
+  if(slots[2].k===slots[3].k&&slots[2].k!=="beside") slots[3].k="beside";
+  // drop one slot, preferring the most solid phrase, so each scene has 5 things
+  const drop=scPick(slots,s=>scSolid(st.p,s.k)?4:1); const use=slots.filter(s=>s!==drop).slice(0,Math.min(5,pool.length));
+  const items=use.map(s=>({k:s.k,anc:s.anc,slot:s.id,c:takeWord()}));
+  return {type:"rel",A,B,mir,items};
+}
+// ---- draw a scene ----
+function scStage(sc){
+  const em=(e,x,y,size,z=1,extra="",attr="")=>`<span class="lem${attr?" it":""}" ${attr} style="left:${x}%;top:${y}%;font-size:${size}cqw;z-index:${z};${extra}">${e}</span>`;
+  let h=`<div class="lground" style="top:72%"></div>`;
+  const tag=(i)=>`data-it="${i}"`;
+  if(sc.type==="deic"){
+    const lay=sc.lay, X=x=>lay.mir?100-x:x, pA=26,pB=56,outA=13,outB=69,far=91;
+    const spX=lay.spk?pB:pA, liX=lay.spk?pA:pB, spOut=lay.spk?outB:outA, liOut=lay.spk?outA:outB;
+    h+=em("🧍",X(pA),62,17,2,"pointer-events:none")+em("🧍‍♀️",X(pB),62,17,2,"pointer-events:none");
+    h+=`<div class="lwho yo" style="left:${X(spX)}%;top:36%">yo 💬</div><div class="lwho" style="left:${X(liX)}%;top:36%">tú</div>`;
+    const pos={here:[spOut,70,10],there:[liOut,70,10],overthere:[far,62,6]};
+    sc.items.forEach((it,i)=>{ const p=pos[it.k]; h+=em(it.c[0],X(p[0]),p[1],p[2],3,"",tag(i)); });
+    return `<div class="lstage scene">${h}</div>`;
+  }
+  const X=x=>sc.mir?100-x:x, cx={A:24,B:60};
+  const under=a=>sc.items.some(it=>it.anc===a&&it.k==="under");
+  for(const a of ["A","B"]){ const R=sc[a][0], y=under(a)?50:60;
+    h+=em(R,X(cx[a]),y,18,2,"pointer-events:none");
+    if(sc.items.some(it=>it.anc===a&&it.k==="inside")) h+=em(R,X(cx[a]),y,18,4,"opacity:.35;clip-path:inset(30% 0 0 0);pointer-events:none");
+    if(sc.items.some(it=>it.anc===a&&it.k==="above")) h+=`<div class="ldash" style="left:${X(cx[a])}%;top:23%;height:20%"></div>`;
+  }
+  sc.items.forEach((it,i)=>{ const e=it.c[0]; let p;
+    if(it.slot==="vA"||it.slot==="vB"){ const x=cx[it.anc];
+      p={top:[x,38,9,3],above:[x,15,8,3],under:[x,77,8,1],inside:[x,62,8,3,"opacity:.95"],front:[x,76,11,5],behind:[x+6,46,9,1,"filter:brightness(.85)"]}[it.k]; }
+    else if(it.slot==="oA") p=[cx.A-17,66,9,3];
+    else if(it.slot==="oB") p=[cx.B+17,66,9,3];
+    else if(it.slot==="mid") p=[42,66,9,3];
+    else p=[92,58,5.5,3];
+    h+=em(e,X(p[0]),p[1],p[2],p[3],p[4]||"",tag(i));
+  });
+  return `<div class="lstage scene">${h}</div>`;
+}
+// ---- questions ----
+// side and far spots can match more than one thing, so those only get "where" questions
+const scWhereOnly=(sc,it)=>sc.type!=="deic"&&["side","far"].includes(locBy(it.k).g);
+function scQuestions(sc){
+  return shuffle(sc.items.map((it,i)=>({i,type:scWhereOnly(sc,it)?"where":scPick(["where","tap","what"],t=>({where:45,tap:30,what:25})[t])})));
+}
+function scWhereOpts(sc,it){
+  const right=scPhrase(it.k,it.anc,sc).es, g=locBy(it.k).g;
+  if(sc.type==="deic") return shuffle(["aquí","ahí","allá"].map(es=>({es,ok:es===right})));
+  const bad=new Set([g]); if(g==="side") bad.add("far"); else if(g==="far") bad.add("side"); else { bad.add("side"); bad.add("far"); }
+  // tricky distractors first: the true spots of the other things in the scene
+  const cands=[];
+  sc.items.forEach(o=>{ if(o!==it&&!bad.has(locBy(o.k).g)) cands.push(scPhrase(o.k,o.anc,sc).es); });
+  for(const a of ["A","B"]) for(const k of sc[a][4].concat(["between"])){ const L=locBy(k); if(!L||bad.has(L.g)) continue; cands.push(scPhrase(k,a,sc).es); }
+  const n=sc.items.length-1, picks=[];
+  for(const c of cands.slice(0,n).concat(shuffle(cands.slice(n)))){ if(c!==right&&!picks.includes(c)) picks.push(c); if(picks.length>=3) break; }
+  return shuffle([{es:right,ok:true}].concat(picks.map(es=>({es,ok:false}))));
+}
+function scWhatOpts(sc,it){
+  const {pool}=scPool(); const others=sc.items.filter(o=>o!==it).map(o=>o.c[1]);
+  const extra=shuffle(pool.map(c=>c[1]).filter(w=>w!==it.c[1]&&!others.includes(w)));
+  const picks=shuffle(others).slice(0,2).concat(extra).slice(0,3);
+  return shuffle([{es:it.c[1],ok:true}].concat(picks.map(es=>({es,ok:false}))));
+}
+// ---- screens ----
+function scMasteryHtml(){
+  const st=scStore(), dots=key=>{ const r=st.p[key]||{st:0}; const n=Math.min(SC_SOLID,r.st); return "●".repeat(n)+"○".repeat(SC_SOLID-n); };
+  const solidP=LOC.filter(l=>scSolid(st.p,l.k)).length, lw=scLearned(), solidW=lw.filter(c=>scSolid(st.w,c[1])).length;
+  return `<div class="tiles"><div class="tile"><div class="v">${solidP}/${LOC.length}</div><div class="k">phrases solid</div></div><div class="tile"><div class="v">${solidW}/${lw.length}</div><div class="k">your words solid</div></div><div class="tile"><div class="v">${st.scenes}</div><div class="k">scenes done</div></div></div>
+    <div class="sec"><h3 style="margin-top:0">Location phrases</h3><div class="note" style="margin-top:0">${SC_SOLID} right in a row (first try) makes a phrase solid ✅. A miss resets it.</div>
+    ${LOC.map(l=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--line)"><span>${scSolid(st.p,l.k)?"✅":"▫️"} <b>${esc(l.es)}</b> <span class="note">${esc(l.en)}</span></span><span style="letter-spacing:2px;color:#ffb74d">${dots(l.k)}</span></div>`).join("")}</div>`;
+}
+function locScene(){
+  game={kind:"locscene",back:locBack}; gameShell("🏡 Find it!","");
+  const {learned,filler}=scPool();
+  gbody(`<div class="sec"><p style="margin:0">Things from your vocab are hidden around a little scene. Answer three kinds of questions:</p>
+    <p class="note">🔤 <b>¿Dónde está…?</b> pick where it is · 👆 <b>Toca</b> read or hear the sentence and tap the thing · 🤔 <b>¿Qué está…?</b> pick the word</p>
+    <p class="note">${filler?`You've learned ${learned} words that fit a scene so far, so some starter words are mixed in. Learn more vocab sets and they show up here automatically.`:`Using the ${learned} words you've learned. New words join the scenes as you learn them, and words or phrases you miss come back more often.`}</p></div>
+    <button class="btn" id="scGo">Start ›</button><div style="height:12px"></div>${scMasteryHtml()}`);
+  $("#scGo").onclick=()=>scNewScene();
+}
+function scNewScene(){
+  const sc=scBuild(); game={kind:"locscene",back:locScene,sc,qs:scQuestions(sc),total:sc.items.length,first:0}; scRender();
+}
+function scRender(){
+  const g=game, sc=g.sc; const done=g.total-g.qs.length;
+  $("#gameTitle").textContent="🏡 Find it!"; $("#gameSub").textContent=`${Math.min(done+1,g.total)}/${g.total} · ${g.first} right first try`;
+  if(!g.qs.length){ const st=scStore(); st.scenes++; saveV();
+    gbody(`${scStage(sc)}<div class="vdone" style="padding-top:14px"><div style="font-size:44px">${g.first===sc.items.length?"🏆":"🏡"}</div><h2>${g.first}/${sc.items.length} first try</h2>
+      <button class="btn" id="scNext">Next scene ›</button><div style="height:10px"></div><button class="btn ghost" id="scProg">Progress</button></div>`);
+    $("#scNext").onclick=scNewScene; $("#scProg").onclick=locScene; return; }
+  const q=g.qs[0], it=sc.items[q.i], S=scSentence(it,sc), vb=scPl(it.c[1])?"están":"está";
+  g.tries=0; g.lock=false;
+  const deicHint=sc.type==="deic"?`<div class="note" style="text-align:center;margin:2px 0 0">You are <b>yo 💬</b>, the one talking.</div>`:"";
+  let prompt="", opts=null;
+  if(q.type==="where"){ prompt=`<div class="gq">¿Dónde ${vb} ${esc(it.c[1])}?</div>`; opts=scWhereOpts(sc,it); }
+  else if(q.type==="what"){ prompt=`<div class="gq">¿Qué ${vb} ${esc(S.where)}?</div>`; opts=scWhatOpts(sc,it); }
+  else prompt=`<div class="gq">👆 ${tapWords(S.es)}</div><div class="row" style="justify-content:center;margin-top:4px"><button class="btn ghost" id="scHear" style="flex:0 1 auto">🔊 Hear it</button></div><div class="note" style="text-align:center">Tap that thing in the picture.</div>`;
+  gbody(`${scStage(sc)}${prompt}${deicHint}${opts?`<div class="opts" style="margin-top:10px">${opts.map((o,i)=>`<button class="opt" data-o="${i}">${esc(o.es)}</button>`).join("")}</div>`:""}<div id="scExp"></div>`);
+  if(q.type==="tap"){ say(S.es,"-10%"); $("#scHear").onclick=()=>say(S.es,"-25%"); }
+  // in where-questions, glow the thing being asked about
+  if(q.type==="where"){ const el=$("#gameBody").querySelector(`.lem[data-it="${q.i}"]`); if(el) el.classList.add("ask"); }
+  const finish=(ok)=>{
+    g.lock=true; const first=ok&&g.tries===0;
+    if(first&&!q.retry) g.first++;
+    scMark("p",it.k,first); scMark("w",it.c[1],first); saveV();
+    const el=$("#gameBody").querySelector(`.lem[data-it="${q.i}"]`); if(el){ el.classList.remove("ask"); el.classList.add("ok"); }
+    const L=locBy(it.k);
+    $("#scExp").innerHTML=`<div class="rule estar"><b>${esc(S.es)}</b><div>${esc(S.en)}</div>${L.note?`<div class="note" style="margin:4px 0 0">${esc(L.note)}</div>`:""}</div><button class="btn" id="scNx" style="margin-top:10px">Next ›</button>`;
+    say(S.es,"-10%");
+    $("#scNx").onclick=()=>{ g.qs.shift();
+      if(!first&&!q.retry){ // ask the same thing again later in this scene, a different way
+        const types=scWhereOnly(sc,it)?["where"]:["where","tap","what"].filter(t=>t!==q.type);
+        g.qs.push({i:q.i,type:types[Math.floor(Math.random()*types.length)],retry:true}); g.total++; }
+      scRender(); };
+  };
+  if(opts) $("#gameBody").querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    if(g.lock) return; const o=opts[+b.dataset.o];
+    if(o.ok){ b.classList.add("right"); chime(true); finish(true); }
+    else { g.tries++; b.classList.add("wrong"); chime(false); if(g.tries>=2){ $("#gameBody").querySelector(`.opt[data-o="${opts.findIndex(x=>x.ok)}"]`).classList.add("right"); finish(false); } }
+  });
+  $("#gameBody").querySelectorAll(".lem.it").forEach(el=>el.onclick=()=>{
+    if(g.lock||q.type!=="tap") return; const i=+el.dataset.it;
+    if(i===q.i){ chime(true); finish(true); }
+    else { g.tries++; chime(false); el.classList.add("bad"); setTimeout(()=>el.classList.remove("bad"),700);
+      const o=sc.items[i]; $("#scExp").innerHTML=`<div class="note err" style="text-align:center">That's ${esc(o.c[1])}: ${esc(scSentence(o,sc).where)}.</div>`;
+      if(g.tries>=2) finish(false); }
+  });
 }
 
 /* ---------- tap any Spanish word to hear it ---------- */
