@@ -31,6 +31,7 @@ Keys live only in the phone's browser storage, never in the code/repo.
 - **Find it**: a helper in a scene asks for every word in the set out loud; tap it. Found items disappear and the spot refills until you have found them all.
 - **Name it**: an item lights up (bigger, bouncing) in a scene; say it. 3 tries per item. Scored on accuracy (50 / 30 / 15 by try), pronunciation (30), speed (20).
 - **Say it**: picture only; cards you say without peeking leave the deck.
+- **List**: every word in the set (picture, Spanish, English, search box). Tap one to open its card: how to say it, hear it, repeat-after-me feedback, previous/next.
 Scenes (market, office, computer store, mechanic shop, kitchen, restaurant, home, clothing store, farm, street, paint shop, park, weather report) are also listed under the sets.
 
 ## Grammar (📐 on the home screen)
